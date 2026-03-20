@@ -7,12 +7,14 @@
   },
   "scripts": {
     "acp": "tsx bin/acp.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "build:signer": "cd acp-cli-signer && rm -f ../bin/acp-cli-signer && go build -o ../bin/acp-cli-signer ."
   },
   "author": "",
   "license": "ISC",
   "description": "CLI tool wrapping the ACP Node SDK for agent tool use",
   "dependencies": {
+    "@privy-io/node": "^0.11.0",
     "acp-node-v2": "file:../acp-node-v2",
     "commander": "^13.0.0",
     "dotenv": "^17.0.0",
