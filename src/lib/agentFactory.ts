@@ -6,6 +6,7 @@ import {
 } from "acp-node-v2";
 import { getPublicKey } from "./config";
 import { getAgentApi } from "./api/agent";
+import { loadSignerKey } from "./signerKeychain.js";
 
 export function requireEnv(name: string): string {
   const val = process.env[name];
@@ -64,11 +65,16 @@ export async function createAgentFromEnv(): Promise<AcpAgent> {
   if (providerType === "privy") {
     const publicKey = getPublicKey(walletAddress);
     const walletId = await getWalletIdByAddress(walletAddress);
+
+    const signerPrivateKey = publicKey
+      ? await loadSignerKey(publicKey)
+      : null;
+
     provider = await PrivyAlchemyEvmProviderAdapter.create({
       walletAddress: walletAddress as `0x${string}`,
       walletId,
-      ...(publicKey
-        ? { signerPublicKey: publicKey }
+      ...(signerPrivateKey
+        ? { signerPrivateKey: signerPrivateKey }
         : { signerPrivateKey: requireEnv("ACP_SIGNER_PRIVATE_KEY") }),
     });
   } else {

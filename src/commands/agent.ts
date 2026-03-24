@@ -2,26 +2,24 @@ import * as readline from "readline";
 import type { Command } from "commander";
 import { isJson, outputResult, outputError } from "../lib/output.js";
 import { AgentApi, getAgentApi, type Agent } from "../lib/api/agent.js";
-import { generateKeyPair } from "../lib/acpCliSigner.js";
 import { prompt, selectFromList, printTable } from "../lib/prompt.js";
 import { setPublicKey } from "../lib/config.js";
+import { generateP256KeyPair } from "@privy-io/node";
+import { storeSignerKey } from "../lib/signerKeychain.js";
 
 async function runAddSignerFlow(
   api: AgentApi,
   json: boolean,
   agent: Agent
 ): Promise<void> {
-  // 1. Generate key pair via acp-cli-signer
+  // 1. Generate key pair and persist private key to keychain
   let publicKey: string;
   try {
-    publicKey = generateKeyPair();
+    const keypair = await generateP256KeyPair();
+    publicKey = keypair.publicKey;
+    await storeSignerKey(keypair.publicKey, keypair.privateKey);
   } catch (err) {
-    outputError(
-      json,
-      `Failed to generate key pair: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
+    outputError(json, `Failed to generate key pair: ${err instanceof Error ? err.message : String(err)}`);
     return;
   }
 
@@ -31,44 +29,26 @@ async function runAddSignerFlow(
     const quorumRes = await api.addQuorum(agent.id, publicKey);
     keyQuorumId = quorumRes.data;
   } catch (err) {
-    outputError(
-      json,
-      `Failed to add quorum: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
+    outputError(json, `Failed to add quorum: ${err instanceof Error ? err.message : String(err)}`);
     return;
   }
 
   // 3. Register signer on the agent
   const walletId = agent.walletProviders[0].metadata.walletId;
-
   try {
     await api.addSigner(agent.id, walletId, keyQuorumId);
   } catch (err) {
-    outputError(
-      json,
-      `Failed to add signer: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
+    outputError(json, `Failed to add signer: ${err instanceof Error ? err.message : String(err)}`);
     return;
   }
 
-  // 4. Add public key to config.json
+  // 4. Persist public key to config (only after all API calls succeed)
   setPublicKey(agent.walletAddress, publicKey);
 
   if (json) {
-    outputResult(json, {
-      agentId: agent.id,
-      agentName: agent.name,
-      keyQuorumId,
-      publicKey,
-    });
+    outputResult(json, { agentId: agent.id, agentName: agent.name, keyQuorumId, publicKey });
   } else {
-    console.log(
-      `\nNew signer ${publicKey} added to ${agent.name} successfully!`
-    );
+    console.log(`\nNew signer ${publicKey} added to ${agent.name} successfully!`);
   }
 }
 
@@ -218,18 +198,12 @@ export function registerAgentCommands(program: Command): void {
     .action(async (_opts, cmd) => {
       const json = isJson(cmd);
 
-      // 1. Fetch agent list for selection
       let agents: Agent[];
       try {
         const result = await agentApi.list();
         agents = result.data;
       } catch (err) {
-        outputError(
-          json,
-          `Failed to fetch agents: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
+        outputError(json, `Failed to fetch agents: ${err instanceof Error ? err.message : String(err)}`);
         return;
       }
 
@@ -238,69 +212,12 @@ export function registerAgentCommands(program: Command): void {
         return;
       }
 
-      // 2. Interactive agent selection
       const selected = await selectFromList(
         "Choose the agent you wish to add a new signer:",
         agents
       );
-      console.log(`\nSelected: ${selected.name}`);
+      console.log(`\nSelected: ${selected.name} ${selected.walletAddress}`);
 
-      // 3. Generate key pair via acp-cli-signer and persist to .env
-      let publicKey: string;
-      try {
-        publicKey = generateKeyPair();
-      } catch (err) {
-        outputError(
-          json,
-          `Failed to generate key pair: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-        return;
-      }
-      setPublicKey(selected.walletAddress, publicKey);
-
-      // 4. Register public key as quorum
-      let keyQuorumId: string;
-      try {
-        const quorumRes = await agentApi.addQuorum(selected.id, publicKey);
-        keyQuorumId = quorumRes.data;
-      } catch (err) {
-        outputError(
-          json,
-          `Failed to add quorum: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-        return;
-      }
-
-      const walletId = selected.walletProviders[0].metadata.walletId;
-
-      // 5. Register signer on the agent
-      try {
-        await agentApi.addSigner(selected.id, walletId, keyQuorumId);
-      } catch (err) {
-        outputError(
-          json,
-          `Failed to add signer: ${
-            err instanceof Error ? err.message : String(err)
-          }`
-        );
-        return;
-      }
-
-      if (json) {
-        outputResult(json, {
-          agentId: selected.id,
-          agentName: selected.name,
-          keyQuorumId,
-          publicKey,
-        });
-      } else {
-        console.log(
-          `\nNew signer ${publicKey} added to ${selected.name} successfully!`
-        );
-      }
+      await runAddSignerFlow(agentApi, json, selected);
     });
 }

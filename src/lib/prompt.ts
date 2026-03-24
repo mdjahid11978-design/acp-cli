@@ -1,4 +1,5 @@
 import * as readline from "readline";
+import { maskAddress } from "./output";
 
 export function prompt(
   rl: readline.Interface,
@@ -18,10 +19,9 @@ export function printTable(rows: [string, string][]): void {
   console.log(line);
 }
 
-export function selectFromList<T extends { name: string }>(
-  title: string,
-  items: T[]
-): Promise<T> {
+export function selectFromList<
+  T extends { name: string; walletAddress: string }
+>(title: string, items: T[]): Promise<T> {
   return new Promise((resolve) => {
     let selectedIndex = 0;
 
@@ -32,9 +32,15 @@ export function selectFromList<T extends { name: string }>(
       for (let i = 0; i < items.length; i++) {
         process.stdout.write(`\x1B[2K`);
         if (i === selectedIndex) {
-          process.stdout.write(`\x1B[32m> ${items[i].name}\x1B[0m\n`);
+          process.stdout.write(
+            `\x1B[32m> ${items[i].name} ${maskAddress(
+              items[i].walletAddress
+            )}\x1B[0m\n`
+          );
         } else {
-          process.stdout.write(`  ${items[i].name}\n`);
+          process.stdout.write(
+            `  ${items[i].name} ${maskAddress(items[i].walletAddress)}\n`
+          );
         }
       }
     };
