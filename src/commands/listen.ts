@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import type { JobSession, JobRoomEntry } from "acp-node-v2";
-import { createAgentFromEnv } from "../lib/agentFactory.js";
+import { createAgentFromEnv } from "../lib/agentFactory";
 
 export function registerListenCommand(program: Command): void {
   program

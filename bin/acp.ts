@@ -1,17 +1,17 @@
 #!/usr/bin/env npx tsx
 import "dotenv/config";
-import { setupEnv } from "../src/lib/config.js";
+import { setupEnv } from "../src/lib/config";
 
 setupEnv();
 import { program } from "commander";
-import { registerBuyerCommands } from "../src/commands/buyer.js";
-import { registerSellerCommands } from "../src/commands/seller.js";
-import { registerJobCommands } from "../src/commands/job.js";
-import { registerListenCommand } from "../src/commands/listen.js";
-import { registerMessageCommands } from "../src/commands/message.js";
-import { registerWalletCommands } from "../src/commands/wallet.js";
-import { registerConfigureCommand } from "../src/commands/configure.js";
-import { registerAgentCommands } from "../src/commands/agent.js";
+import { registerBuyerCommands } from "../src/commands/buyer";
+import { registerSellerCommands } from "../src/commands/seller";
+import { registerJobCommands } from "../src/commands/job";
+import { registerListenCommand } from "../src/commands/listen";
+import { registerMessageCommands } from "../src/commands/message";
+import { registerWalletCommands } from "../src/commands/wallet";
+import { registerConfigureCommand } from "../src/commands/configure";
+import { registerAgentCommands } from "../src/commands/agent";
 
 program
   .name("acp")

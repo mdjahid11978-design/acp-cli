@@ -3,10 +3,11 @@ import {
   ACP_CONTRACT_ADDRESS,
   AlchemyEvmProviderAdapter,
   PrivyAlchemyEvmProviderAdapter,
+  SocketTransport,
 } from "acp-node-v2";
-import { getPublicKey } from "./config";
-import { getAgentApi } from "./api/agent";
-import { loadSignerKey } from "./signerKeychain.js";
+import { getPublicKey, getWalletId, setWalletId } from "./config";
+import { getClient } from "./api/client";
+import { loadSignerKey } from "./signerKeychain";
 
 export function requireEnv(name: string): string {
   const val = process.env[name];
@@ -29,11 +30,10 @@ const BASE_SEPOLIA_CHAIN = {
   testnet: true,
 } as const;
 
-const agentApi = getAgentApi();
-
 export async function getWalletIdByAddress(
   walletAddress: string
 ): Promise<string> {
+  const { agentApi } = await getClient();
   const agentList = await agentApi.list();
   const agent = agentList.data.find(
     (agent) => agent.walletAddress === walletAddress
@@ -64,7 +64,9 @@ export async function createAgentFromEnv(): Promise<AcpAgent> {
 
   if (providerType === "privy") {
     const publicKey = getPublicKey(walletAddress);
-    const walletId = await getWalletIdByAddress(walletAddress);
+    const walletId =
+      getWalletId(walletAddress) ?? (await getWalletIdByAddress(walletAddress));
+    setWalletId(walletAddress, walletId);
 
     const signerPrivateKey = publicKey ? await loadSignerKey(publicKey) : null;
 
@@ -87,7 +89,9 @@ export async function createAgentFromEnv(): Promise<AcpAgent> {
   return AcpAgent.create({
     contractAddress,
     provider,
-    transport: { type: "socket", url: socketUrl },
+    transport: new SocketTransport({
+      serverUrl: socketUrl,
+    }),
   });
 }
 

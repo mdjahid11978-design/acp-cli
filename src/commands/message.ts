@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { io } from "socket.io-client";
-import { isJson, outputResult, outputError } from "../lib/output.js";
-import { getWalletAddress, getSocketUrl } from "../lib/agentFactory.js";
+import { isJson, outputResult, outputError } from "../lib/output";
+import { getWalletAddress, getSocketUrl } from "../lib/agentFactory";
 
 export function registerMessageCommands(program: Command): void {
   const message = program

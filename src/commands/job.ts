@@ -1,12 +1,12 @@
 import type { Command } from "commander";
-import { isJson, outputResult, outputError } from "../lib/output.js";
-import { getWalletAddress, getSocketUrl } from "../lib/agentFactory.js";
-import { getActiveJobs, getJobHistory } from "../lib/rest.js";
+import { isJson, outputResult, outputError } from "../lib/output";
+import { getWalletAddress, getSocketUrl } from "../lib/agentFactory";
+import { getActiveJobs, getJobHistory } from "../lib/rest";
+import { getClient } from "../lib/api/client";
+import { formatUnits } from "viem";
 
 export function registerJobCommands(program: Command): void {
-  const job = program
-    .command("job")
-    .description("Job queries (status, list)");
+  const job = program.command("job").description("Job queries (status, list)");
 
   job
     .command("list")
@@ -15,8 +15,9 @@ export function registerJobCommands(program: Command): void {
       const json = isJson(cmd);
       try {
         const wallet = getWalletAddress();
-        const serverUrl = getSocketUrl();
-        const jobs = await getActiveJobs(serverUrl, wallet);
+
+        const { jobApi } = await getClient(wallet);
+        const jobs = await jobApi.getActiveJobs();
 
         if (json) {
           outputResult(true, { jobs });
@@ -26,7 +27,17 @@ export function registerJobCommands(program: Command): void {
           } else {
             console.log(`Active jobs (${jobs.length}):\n`);
             for (const j of jobs) {
-              console.log(`  Job ${j.onChainJobId}  (chain ${j.chainId})`);
+              console.log(`  Job ID:           ${j.onChainJobId}`);
+              console.log(`  Chain ID:         ${j.chainId}`);
+              console.log(`  Client:           ${j.clientAddress}`);
+              console.log(`  Provider:         ${j.providerAddress}`);
+              console.log(`  Evaluator:        ${j.evaluatorAddress}`);
+              console.log(
+                `  Budget:           ${formatUnits(BigInt(j.budget), 6)} USDC`
+              );
+              console.log(`  Status:           ${j.jobStatus}`);
+              console.log(`  Expires At:       ${j.expiredAt}`);
+              console.log();
             }
           }
         }
@@ -37,17 +48,18 @@ export function registerJobCommands(program: Command): void {
 
   job
     .command("status")
-    .description("Get job status and message history (REST, no socket connection needed)")
+    .description(
+      "Get job status and message history (REST, no socket connection needed)"
+    )
     .requiredOption("--job-id <id>", "On-chain job ID")
     .option("--chain-id <id>", "Chain ID", "84532")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
         const wallet = getWalletAddress();
-        const serverUrl = getSocketUrl();
-        const entries = await getJobHistory(
-          serverUrl,
-          wallet,
+
+        const { jobApi } = await getClient(wallet);
+        const entries = await jobApi.getJobHistory(
           Number(opts.chainId),
           opts.jobId
         );

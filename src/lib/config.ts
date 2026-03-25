@@ -5,6 +5,8 @@ const CONFIG_PATH = resolve(process.cwd(), "config.json");
 
 interface AgentConfig {
   publicKey: string;
+  token?: string;
+  walletId?: string;
 }
 
 interface Config {
@@ -39,6 +41,30 @@ export function setToken(token: string): void {
   saveConfig(config);
 }
 
+export function getAgentToken(walletAddress: string): string | undefined {
+  return loadConfig().agents?.[walletAddress]?.token;
+}
+
+export function setAgentToken(walletAddress: string, token: string): void {
+  const config = loadConfig();
+  config.agents ??= {};
+  config.agents[walletAddress] ??= { publicKey: "" };
+  config.agents[walletAddress].token = token;
+  saveConfig(config);
+}
+
+export function getWalletId(walletAddress: string): string | undefined {
+  return loadConfig().agents?.[walletAddress]?.walletId;
+}
+
+export function setWalletId(walletAddress: string, walletId: string): void {
+  const config = loadConfig();
+  config.agents ??= {};
+  config.agents[walletAddress] ??= { publicKey: "" };
+  config.agents[walletAddress].walletId = walletId;
+  saveConfig(config);
+}
+
 export function getPublicKey(agentAddress: string): string | undefined {
   return loadConfig().agents?.[agentAddress]?.publicKey;
 }
@@ -49,4 +75,15 @@ export function setPublicKey(agentAddress: string, publicKey: string): void {
   config.agents[agentAddress] ??= { publicKey: "" };
   config.agents[agentAddress].publicKey = publicKey;
   saveConfig(config);
+}
+
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString()
+    );
+    return typeof payload.exp === "number" && payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
 }

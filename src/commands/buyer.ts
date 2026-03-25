@@ -1,7 +1,8 @@
 import type { Command } from "commander";
 import { Erc20Token } from "acp-node-v2";
-import { createAgentFromEnv } from "../lib/agentFactory.js";
-import { isJson, outputResult, outputError } from "../lib/output.js";
+import { createAgentFromEnv } from "../lib/agentFactory";
+import { isJson, outputResult, outputError } from "../lib/output";
+import { getClient } from "../lib/api/client";
 
 export function registerBuyerCommands(program: Command): void {
   const buyer = program
@@ -17,8 +18,9 @@ export function registerBuyerCommands(program: Command): void {
       "Evaluator wallet address (defaults to your own)"
     )
     .requiredOption("--description <text>", "Job description")
+    .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .option("--expired-in <seconds>", "Seconds until expiry", "3600")
-    .option("--hook-address <address>", "Hook address")
+    .option("--hook <address>", "Hook address")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
@@ -35,7 +37,7 @@ export function registerBuyerCommands(program: Command): void {
             evaluatorAddress: evaluator,
             expiredAt,
             description: opts.description,
-            hookAddress: opts.hookAddress,
+            hookAddress: opts.hook,
           });
 
           outputResult(json, {
@@ -45,7 +47,7 @@ export function registerBuyerCommands(program: Command): void {
             provider: opts.provider,
             evaluator,
             description: opts.description,
-            hookAddress: opts.hookAddress ?? undefined,
+            hookAddress: opts.hook ?? "N/A",
           });
         } finally {
           await agent.stop();
@@ -60,18 +62,36 @@ export function registerBuyerCommands(program: Command): void {
     .description("Fund a job with the agreed budget (USDC)")
     .requiredOption("--job-id <id>", "On-chain job ID")
     .requiredOption("--amount <usdc>", "USDC amount to fund")
+    .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
+        const chainId = Number(opts.chainId);
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId);
+          const session = agent.getSession(opts.jobId, chainId);
           if (!session) {
             throw new Error(
               `No session found for job ${opts.jobId}. The job may not exist or you may not be a participant.`
             );
           }
+
+          const { jobApi } = await getClient(await agent.getAddress());
+          const job = await jobApi.getJob(chainId, opts.jobId);
+
+          const payableIntent = job.intents.find(
+            (intent) => intent.isSigned === false && BigInt(intent.amount) > 0
+          );
+
+          if (payableIntent && job.hookAddress) {
+            await session.approveAllowance(
+              payableIntent.tokenAddress,
+              job.hookAddress,
+              BigInt(payableIntent.amount)
+            );
+          }
+
           await session.fund(Erc20Token.usdc(Number(opts.amount)));
           outputResult(json, {
             success: true,
@@ -91,6 +111,7 @@ export function registerBuyerCommands(program: Command): void {
     .command("complete")
     .description("Approve and complete a job (as evaluator)")
     .requiredOption("--job-id <id>", "On-chain job ID")
+    .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .option("--reason <text>", "Reason for completion", "Approved")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
@@ -98,7 +119,7 @@ export function registerBuyerCommands(program: Command): void {
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId);
+          const session = agent.getSession(opts.jobId, Number(opts.chainId));
           if (!session) {
             throw new Error(`No session found for job ${opts.jobId}.`);
           }
@@ -121,6 +142,7 @@ export function registerBuyerCommands(program: Command): void {
     .command("reject")
     .description("Reject a job or deliverable (as evaluator)")
     .requiredOption("--job-id <id>", "On-chain job ID")
+    .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .option("--reason <text>", "Reason for rejection", "Rejected")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
@@ -128,7 +150,7 @@ export function registerBuyerCommands(program: Command): void {
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId);
+          const session = agent.getSession(opts.jobId, Number(opts.chainId));
           if (!session) {
             throw new Error(`No session found for job ${opts.jobId}.`);
           }

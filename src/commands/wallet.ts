@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { isJson, outputResult, outputError } from "../lib/output.js";
-import { getWalletAddress } from "../lib/agentFactory.js";
+import { isJson, outputResult, outputError } from "../lib/output";
+import { getWalletAddress } from "../lib/agentFactory";
 
 export function registerWalletCommands(program: Command): void {
   const wallet = program

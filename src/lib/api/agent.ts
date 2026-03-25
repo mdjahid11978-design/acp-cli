@@ -1,5 +1,4 @@
-import { ApiClient } from "./client.js";
-import { getToken } from "../config.js";
+import { ApiClient } from "./client";
 
 export interface AddSignerResponse {
   message: string;
@@ -53,20 +52,12 @@ interface AddQuorumResponse {
   data: string; // keyQuorumId
 }
 
-export function getAgentApi(): AgentApi {
-  const apiUrl = process.env.ACP_API_URL || "https://acp.virtuals.io";
-  const token = getToken();
-  if (!token) {
-    throw new Error("ACP_TOKEN is not set. Run `acp configure` first.");
-  }
-  return new AgentApi(apiUrl, token);
-}
 
 export class AgentApi {
   private client: ApiClient;
 
-  constructor(baseUrl: string, token: string) {
-    this.client = new ApiClient(baseUrl, token);
+  constructor(client: ApiClient) {
+    this.client = client;
   }
 
   async list(page?: number, pageSize?: number): Promise<AgentListResponse> {

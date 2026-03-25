@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { Erc20Token } from "acp-node-v2";
-import { createAgentFromEnv } from "../lib/agentFactory.js";
-import { isJson, outputResult, outputError } from "../lib/output.js";
+import { createAgentFromEnv } from "../lib/agentFactory";
+import { isJson, outputResult, outputError } from "../lib/output";
 
 export function registerSellerCommands(program: Command): void {
   const seller = program
@@ -13,15 +13,18 @@ export function registerSellerCommands(program: Command): void {
     .description("Propose a budget for a job (USDC)")
     .requiredOption("--job-id <id>", "On-chain job ID")
     .requiredOption("--amount <usdc>", "USDC amount to propose")
+    .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId);
+          const session = agent.getSession(opts.jobId, Number(opts.chainId));
           if (!session) {
-            throw new Error(`No session found for job ${opts.jobId}. The job may not exist or you may not be a participant.`);
+            throw new Error(
+              `No session found for job ${opts.jobId}. The job may not exist or you may not be a participant.`
+            );
           }
           await session.setBudget(Erc20Token.usdc(Number(opts.amount)));
           outputResult(json, {
@@ -43,13 +46,14 @@ export function registerSellerCommands(program: Command): void {
     .description("Submit a deliverable for a job")
     .requiredOption("--job-id <id>", "On-chain job ID")
     .requiredOption("--deliverable <text>", "Deliverable content or reference")
+    .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId);
+          const session = agent.getSession(opts.jobId, Number(opts.chainId));
           if (!session) {
             throw new Error(`No session found for job ${opts.jobId}.`);
           }

@@ -1,3 +1,8 @@
+import { getAgentToken, getToken, isTokenExpired } from "../config";
+import { AuthApi } from "./auth";
+import { AgentApi } from "./agent";
+import { JobApi } from "./job";
+
 export class ApiClient {
   constructor(private baseUrl: string, private token?: string) {}
 
@@ -25,4 +30,42 @@ export class ApiClient {
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return res.json() as Promise<T>;
   }
+}
+
+async function resolveToken(
+  walletAddress: string | undefined,
+  apiUrl: string
+): Promise<string> {
+  if (walletAddress) {
+    let token = getAgentToken(walletAddress);
+    if (!token || isTokenExpired(token)) {
+      const chainId = Number(process.env.ACP_CHAIN_ID || "84532");
+      token = await AuthApi.fetchAndStoreToken(walletAddress, chainId, apiUrl);
+    }
+    return token;
+  }
+  const token = getToken();
+  if (!token) {
+    throw new Error("ACP_TOKEN is not set. Run `acp configure` first.");
+  }
+  return token;
+}
+
+export async function getClient(walletAddress?: string): Promise<{
+  agentApi: AgentApi;
+  jobApi: JobApi;
+  authApi: AuthApi;
+}> {
+  const apiUrl = process.env.ACP_API_URL || "https://acp.virtuals.io";
+  const token = await resolveToken(walletAddress, apiUrl);
+  const httpClient = new ApiClient(apiUrl, token);
+  return {
+    agentApi: new AgentApi(httpClient),
+    jobApi: new JobApi(httpClient, walletAddress ?? ""),
+    authApi: new AuthApi(httpClient),
+  };
+}
+
+export async function getAgentApi(walletAddress?: string): Promise<AgentApi> {
+  return (await getClient(walletAddress)).agentApi;
 }

@@ -1,11 +1,12 @@
 import * as readline from "readline";
 import type { Command } from "commander";
-import { isJson, outputResult, outputError } from "../lib/output.js";
-import { AgentApi, getAgentApi, type Agent } from "../lib/api/agent.js";
-import { prompt, selectFromList, printTable } from "../lib/prompt.js";
-import { setPublicKey } from "../lib/config.js";
+import { isJson, outputResult, outputError } from "../lib/output";
+import { AgentApi, type Agent } from "../lib/api/agent";
+import { getClient } from "../lib/api/client";
+import { prompt, selectFromList, printTable } from "../lib/prompt";
+import { setPublicKey, setWalletId } from "../lib/config";
 import { generateP256KeyPair } from "@privy-io/node";
-import { storeSignerKey } from "../lib/signerKeychain.js";
+import { storeSignerKey } from "../lib/signerKeychain";
 
 async function runAddSignerFlow(
   api: AgentApi,
@@ -19,7 +20,12 @@ async function runAddSignerFlow(
     publicKey = keypair.publicKey;
     await storeSignerKey(keypair.publicKey, keypair.privateKey);
   } catch (err) {
-    outputError(json, `Failed to generate key pair: ${err instanceof Error ? err.message : String(err)}`);
+    outputError(
+      json,
+      `Failed to generate key pair: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
     return;
   }
 
@@ -29,7 +35,12 @@ async function runAddSignerFlow(
     const quorumRes = await api.addQuorum(agent.id, publicKey);
     keyQuorumId = quorumRes.data;
   } catch (err) {
-    outputError(json, `Failed to add quorum: ${err instanceof Error ? err.message : String(err)}`);
+    outputError(
+      json,
+      `Failed to add quorum: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
     return;
   }
 
@@ -38,29 +49,43 @@ async function runAddSignerFlow(
   try {
     await api.addSigner(agent.id, walletId, keyQuorumId);
   } catch (err) {
-    outputError(json, `Failed to add signer: ${err instanceof Error ? err.message : String(err)}`);
+    outputError(
+      json,
+      `Failed to add signer: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
     return;
   }
 
   // 4. Persist public key to config (only after all API calls succeed)
   setPublicKey(agent.walletAddress, publicKey);
+  setWalletId(agent.walletAddress, walletId);
 
   if (json) {
-    outputResult(json, { agentId: agent.id, agentName: agent.name, keyQuorumId, publicKey });
+    outputResult(json, {
+      agentId: agent.id,
+      agentName: agent.name,
+      keyQuorumId,
+      publicKey,
+    });
   } else {
-    console.log(`\nNew signer ${publicKey} added to ${agent.name} successfully!`);
+    console.log(
+      `\nNew signer ${publicKey} added to ${agent.name} successfully!`
+    );
   }
 }
 
 export function registerAgentCommands(program: Command): void {
   const agent = program.command("agent").description("Manage ACP agents");
 
-  const agentApi: AgentApi = getAgentApi();
+  const agentApiPromise = getClient();
 
   agent
     .command("create")
     .description("Create a new agent")
     .action(async (_opts, cmd) => {
+      const { agentApi } = await agentApiPromise;
       const json = isJson(cmd);
 
       const rl = readline.createInterface({
@@ -151,6 +176,7 @@ export function registerAgentCommands(program: Command): void {
     .option("--page <number>", "Page number")
     .option("--page-size <number>", "Number of agents per page")
     .action(async (opts, cmd) => {
+      const { agentApi } = await agentApiPromise;
       const json = isJson(cmd);
 
       const page = opts.page ? parseInt(opts.page, 10) : undefined;
@@ -196,6 +222,7 @@ export function registerAgentCommands(program: Command): void {
     .command("add-signer")
     .description("Add a new signer to an agent")
     .action(async (_opts, cmd) => {
+      const { agentApi } = await agentApiPromise;
       const json = isJson(cmd);
 
       let agents: Agent[];
@@ -203,7 +230,12 @@ export function registerAgentCommands(program: Command): void {
         const result = await agentApi.list();
         agents = result.data;
       } catch (err) {
-        outputError(json, `Failed to fetch agents: ${err instanceof Error ? err.message : String(err)}`);
+        outputError(
+          json,
+          `Failed to fetch agents: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
         return;
       }
 

@@ -1,8 +1,9 @@
 import { exec } from "child_process";
 import type { Command } from "commander";
-import { isJson, outputResult, outputError } from "../lib/output.js";
-import { AuthApi } from "../lib/api/auth.js";
-import { setToken } from "../lib/config.js";
+import { isJson, outputResult, outputError } from "../lib/output";
+import { AuthApi } from "../lib/api/auth";
+import { ApiClient } from "../lib/api/client";
+import { setToken } from "../lib/config";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
@@ -43,7 +44,7 @@ export function registerConfigureCommand(program: Command): void {
         return;
       }
 
-      const authApi = new AuthApi(apiUrl);
+      const authApi = new AuthApi(new ApiClient(apiUrl));
 
       let url: string;
       let requestId: string;
