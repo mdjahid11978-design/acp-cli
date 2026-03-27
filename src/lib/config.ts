@@ -11,6 +11,7 @@ interface AgentConfig {
 
 interface Config {
   acp_token?: string;
+  activeWallet?: string;
   agents?: Record<string, AgentConfig>;
 }
 
@@ -74,6 +75,16 @@ export function setPublicKey(agentAddress: string, publicKey: string): void {
   config.agents ??= {};
   config.agents[agentAddress] ??= { publicKey: "" };
   config.agents[agentAddress].publicKey = publicKey;
+  saveConfig(config);
+}
+
+export function getActiveWallet(): string | undefined {
+  return loadConfig().activeWallet;
+}
+
+export function setActiveWallet(walletAddress: string): void {
+  const config = loadConfig();
+  config.activeWallet = walletAddress;
   saveConfig(config);
 }
 

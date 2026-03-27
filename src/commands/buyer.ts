@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { AssetToken } from "acp-node-v2";
-import { createAgentFromEnv } from "../lib/agentFactory";
+import { createAgentFromConfig } from "../lib/agentFactory";
 import { isJson, outputResult, outputError } from "../lib/output";
 
 export function registerBuyerCommands(program: Command): void {
@@ -24,7 +24,7 @@ export function registerBuyerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const buyerAddress = await agent.getAddress();
@@ -70,7 +70,7 @@ export function registerBuyerCommands(program: Command): void {
       const json = isJson(cmd);
       try {
         const chainId = Number(opts.chainId);
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const session = agent.getSession(chainId, opts.jobId);
@@ -105,7 +105,7 @@ export function registerBuyerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const session = agent.getSession(Number(opts.chainId), opts.jobId);
@@ -136,7 +136,7 @@ export function registerBuyerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const session = agent.getSession(Number(opts.chainId), opts.jobId);

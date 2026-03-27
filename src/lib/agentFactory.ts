@@ -1,11 +1,16 @@
 import {
   AcpAgent,
   ACP_CONTRACT_ADDRESSES,
-  AlchemyEvmProviderAdapter,
   PrivyAlchemyEvmProviderAdapter,
   SocketTransport,
+  SOCKET_SERVER_URL,
 } from "acp-node-v2";
-import { getPublicKey, getWalletId, setWalletId } from "./config";
+import {
+  getActiveWallet,
+  getPublicKey,
+  getWalletId,
+  setWalletId,
+} from "./config";
 import { getClient } from "./api/client";
 import { loadSignerKey } from "./signerKeychain";
 
@@ -16,19 +21,6 @@ export function requireEnv(name: string): string {
   }
   return val;
 }
-
-// Base Sepolia chain config matching @account-kit/infra's baseSepolia.
-// Defined inline to avoid importing @account-kit/infra directly (prevents
-// duplicate-package type conflicts with the SDK's own copy).
-const BASE_SEPOLIA_CHAIN = {
-  id: 84532,
-  name: "Base Sepolia",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://sepolia.base.org"] },
-  },
-  testnet: true,
-} as const;
 
 export async function getWalletIdByAddress(
   walletAddress: string
@@ -52,55 +44,55 @@ export async function getWalletIdByAddress(
   return walletId;
 }
 
-export async function createAgentFromEnv(): Promise<AcpAgent> {
-  const providerType = process.env.ACP_PROVIDER_TYPE ?? "privy";
-  const walletAddress = requireEnv("ACP_WALLET_ADDRESS");
-  const socketUrl =
-    process.env.ACP_SOCKET_SERVER_URL ?? "http://localhost:3000";
-  const contractAddresses: Record<number, string> =
-    process.env.ACP_CONTRACT_ADDRESS
-      ? { [BASE_SEPOLIA_CHAIN.id]: process.env.ACP_CONTRACT_ADDRESS }
-      : ACP_CONTRACT_ADDRESSES;
-
-  let provider;
-
-  if (providerType === "privy") {
-    const publicKey = getPublicKey(walletAddress);
-    const walletId =
-      getWalletId(walletAddress) ?? (await getWalletIdByAddress(walletAddress));
-    setWalletId(walletAddress, walletId);
-
-    const signerPrivateKey = publicKey ? await loadSignerKey(publicKey) : null;
-
-    provider = await PrivyAlchemyEvmProviderAdapter.create({
-      walletAddress: walletAddress as `0x${string}`,
-      walletId,
-      ...(signerPrivateKey
-        ? { signerPrivateKey: signerPrivateKey }
-        : { signerPrivateKey: requireEnv("ACP_SIGNER_PRIVATE_KEY") }),
-    });
-  } else {
-    provider = await AlchemyEvmProviderAdapter.create({
-      walletAddress: walletAddress as `0x${string}`,
-      privateKey: requireEnv("ACP_PRIVATE_KEY") as `0x${string}`,
-      entityId: Number(process.env.ACP_ENTITY_ID ?? "1"),
-      chains: [BASE_SEPOLIA_CHAIN as any],
-    });
+export async function createAgentFromConfig(): Promise<AcpAgent> {
+  const walletAddress = getActiveWallet();
+  if (!walletAddress) {
+    throw new Error(
+      "No active agent. Run `acp agent create` or `acp agent use`."
+    );
   }
 
+  const publicKey = getPublicKey(walletAddress);
+  if (!publicKey) {
+    throw new Error("No signer configured. Run `acp agent add-signer`.");
+  }
+
+  const walletId =
+    getWalletId(walletAddress) ?? (await getWalletIdByAddress(walletAddress));
+  setWalletId(walletAddress, walletId);
+
+  const signerPrivateKey = await loadSignerKey(publicKey);
+  if (!signerPrivateKey) {
+    throw new Error(
+      "Signer key not found in keychain. Run `acp agent add-signer`."
+    );
+  }
+
+  const provider = await PrivyAlchemyEvmProviderAdapter.create({
+    walletAddress: walletAddress as `0x${string}`,
+    walletId,
+    signerPrivateKey,
+  });
+
   return AcpAgent.create({
-    contractAddresses,
+    contractAddresses: ACP_CONTRACT_ADDRESSES,
     provider,
     transport: new SocketTransport({
-      serverUrl: socketUrl,
+      serverUrl: process.env.ACP_SOCKET_SERVER_URL ?? SOCKET_SERVER_URL,
     }),
   });
 }
 
 export function getWalletAddress(): string {
-  return requireEnv("ACP_WALLET_ADDRESS");
+  const addr = getActiveWallet();
+  if (!addr) {
+    throw new Error(
+      "No active agent. Run `acp agent create` or `acp agent use`."
+    );
+  }
+  return addr;
 }
 
 export function getSocketUrl(): string {
-  return process.env.ACP_SOCKET_SERVER_URL ?? "http://localhost:3000";
+  return process.env.ACP_SOCKET_SERVER_URL ?? SOCKET_SERVER_URL;
 }

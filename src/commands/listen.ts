@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import type { JobSession, JobRoomEntry } from "acp-node-v2";
-import { createAgentFromEnv } from "../lib/agentFactory";
+import { createAgentFromConfig } from "../lib/agentFactory";
 
 export function registerListenCommand(program: Command): void {
   program
@@ -12,7 +12,7 @@ export function registerListenCommand(program: Command): void {
     .option("--job-id <id>", "Filter events to a specific job ID")
     .action(async (opts) => {
       try {
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
 
         agent.on("entry", async (session: JobSession, entry: JobRoomEntry) => {
           if (opts.jobId && session.jobId !== opts.jobId) return;

@@ -1,5 +1,5 @@
 import { EvmAcpClient } from "acp-node-v2";
-import { createAgentFromEnv } from "../agentFactory";
+import { createAgentFromConfig } from "../agentFactory";
 import { setAgentToken } from "../config";
 import { ApiClient } from "./client";
 
@@ -67,7 +67,7 @@ export class AuthApi {
   ): Promise<string> {
     const message = `acp-auth:${Date.now()}`;
 
-    const agent = await createAgentFromEnv();
+    const agent = await createAgentFromConfig();
     const acpClient = agent.getClient();
     if (!(acpClient instanceof EvmAcpClient)) {
       throw new Error("signMessage requires an EVM provider");

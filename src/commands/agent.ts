@@ -4,7 +4,7 @@ import { isJson, outputResult, outputError } from "../lib/output";
 import { AgentApi, type Agent } from "../lib/api/agent";
 import { getClient } from "../lib/api/client";
 import { prompt, selectFromList, printTable } from "../lib/prompt";
-import { setPublicKey, setWalletId } from "../lib/config";
+import { setPublicKey, setWalletId, setActiveWallet } from "../lib/config";
 import { generateP256KeyPair } from "@privy-io/node";
 import { storeSignerKey } from "../lib/signerKeychain";
 
@@ -79,13 +79,11 @@ async function runAddSignerFlow(
 export function registerAgentCommands(program: Command): void {
   const agent = program.command("agent").description("Manage ACP agents");
 
-  const agentApiPromise = getClient();
-
   agent
     .command("create")
     .description("Create a new agent")
     .action(async (_opts, cmd) => {
-      const { agentApi } = await agentApiPromise;
+      const { agentApi } = await getClient();
       const json = isJson(cmd);
 
       const rl = readline.createInterface({
@@ -123,6 +121,10 @@ export function registerAgentCommands(program: Command): void {
           }`
         );
         return;
+      }
+
+      if (created.walletAddress) {
+        setActiveWallet(created.walletAddress);
       }
 
       if (json) {
@@ -176,7 +178,7 @@ export function registerAgentCommands(program: Command): void {
     .option("--page <number>", "Page number")
     .option("--page-size <number>", "Number of agents per page")
     .action(async (opts, cmd) => {
-      const { agentApi } = await agentApiPromise;
+      const { agentApi } = await getClient();
       const json = isJson(cmd);
 
       const page = opts.page ? parseInt(opts.page, 10) : undefined;
@@ -219,10 +221,50 @@ export function registerAgentCommands(program: Command): void {
     });
 
   agent
+    .command("use")
+    .description("Set the active agent for all commands")
+    .action(async (_opts, cmd) => {
+      const { agentApi } = await getClient();
+      const json = isJson(cmd);
+
+      let agents: Agent[];
+      try {
+        const result = await agentApi.list();
+        agents = result.data;
+      } catch (err) {
+        outputError(
+          json,
+          `Failed to fetch agents: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      }
+
+      if (agents.length === 0) {
+        outputError(json, "No agents found. Run `acp agent create` first.");
+        return;
+      }
+
+      const selected = await selectFromList(
+        "Choose the agent to set as active:",
+        agents
+      );
+
+      setActiveWallet(selected.walletAddress);
+
+      outputResult(json, {
+        success: true,
+        activeAgent: selected.name,
+        walletAddress: selected.walletAddress,
+      });
+    });
+
+  agent
     .command("add-signer")
     .description("Add a new signer to an agent")
     .action(async (_opts, cmd) => {
-      const { agentApi } = await agentApiPromise;
+      const { agentApi } = await getClient();
       const json = isJson(cmd);
 
       let agents: Agent[];

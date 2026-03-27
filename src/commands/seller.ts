@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { AssetToken } from "acp-node-v2";
-import { createAgentFromEnv } from "../lib/agentFactory";
+import { createAgentFromConfig } from "../lib/agentFactory";
 import { isJson, outputResult, outputError } from "../lib/output";
 
 export function registerSellerCommands(program: Command): void {
@@ -17,7 +17,7 @@ export function registerSellerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const session = agent.getSession(Number(opts.chainId), opts.jobId);
@@ -52,7 +52,7 @@ export function registerSellerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const chainId = Number(opts.chainId);
@@ -93,7 +93,7 @@ export function registerSellerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
-        const agent = await createAgentFromEnv();
+        const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const chainId = Number(opts.chainId);
