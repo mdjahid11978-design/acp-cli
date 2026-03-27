@@ -14,7 +14,7 @@ export function registerListenCommand(program: Command): void {
       try {
         const agent = await createAgentFromEnv();
 
-        agent.on("entry", (session: JobSession, entry: JobRoomEntry) => {
+        agent.on("entry", async (session: JobSession, entry: JobRoomEntry) => {
           if (opts.jobId && session.jobId !== opts.jobId) return;
 
           const line = JSON.stringify({
@@ -23,7 +23,7 @@ export function registerListenCommand(program: Command): void {
             status: session.status,
             roles: session.roles,
             availableTools: session.availableTools().map((t) => t.name),
-            context: session.toContext(),
+            context: await session.toContext(),
             entry,
           });
           process.stdout.write(line + "\n");

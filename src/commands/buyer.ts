@@ -1,8 +1,7 @@
 import type { Command } from "commander";
-import { Erc20Token } from "acp-node-v2";
+import { AssetToken } from "acp-node-v2";
 import { createAgentFromEnv } from "../lib/agentFactory";
 import { isJson, outputResult, outputError } from "../lib/output";
-import { getClient } from "../lib/api/client";
 
 export function registerBuyerCommands(program: Command): void {
   const buyer = program
@@ -21,6 +20,7 @@ export function registerBuyerCommands(program: Command): void {
     .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .option("--expired-in <seconds>", "Seconds until expiry", "3600")
     .option("--hook <address>", "Hook address")
+    .option("--fund-transfer", "Use fund transfer hook (defaults to chain hook address)")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
@@ -31,14 +31,17 @@ export function registerBuyerCommands(program: Command): void {
           const evaluator = opts.evaluator ?? buyerAddress;
           const expiredAt =
             Math.floor(Date.now() / 1000) + Number(opts.expiredIn);
-
-          const jobId = await agent.createJob({
+          const params = {
             providerAddress: opts.provider,
             evaluatorAddress: evaluator,
             expiredAt,
             description: opts.description,
             hookAddress: opts.hook,
-          });
+          };
+
+          const jobId = opts.fundTransfer
+            ? await agent.createFundTransferJob(Number(opts.chainId), params)
+            : await agent.createJob(Number(opts.chainId), params);
 
           outputResult(json, {
             success: true,
@@ -47,7 +50,7 @@ export function registerBuyerCommands(program: Command): void {
             provider: opts.provider,
             evaluator,
             description: opts.description,
-            hookAddress: opts.hook ?? "N/A",
+            hookAddress: opts.hook ?? (opts.fundTransfer ? "default" : "N/A"),
           });
         } finally {
           await agent.stop();
@@ -70,29 +73,15 @@ export function registerBuyerCommands(program: Command): void {
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId, chainId);
+          const session = agent.getSession(chainId, opts.jobId);
           if (!session) {
             throw new Error(
               `No session found for job ${opts.jobId}. The job may not exist or you may not be a participant.`
             );
           }
 
-          const { jobApi } = await getClient(await agent.getAddress());
-          const job = await jobApi.getJob(chainId, opts.jobId);
-
-          const payableIntent = job.intents.find(
-            (intent) => intent.isSigned === false && BigInt(intent.amount) > 0
-          );
-
-          if (payableIntent && job.hookAddress) {
-            await session.approveAllowance(
-              payableIntent.tokenAddress,
-              job.hookAddress,
-              BigInt(payableIntent.amount)
-            );
-          }
-
-          await session.fund(Erc20Token.usdc(Number(opts.amount)));
+          await session.fetchJob();
+          await session.fund(AssetToken.usdc(Number(opts.amount), chainId));
           outputResult(json, {
             success: true,
             action: "fund",
@@ -119,7 +108,7 @@ export function registerBuyerCommands(program: Command): void {
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId, Number(opts.chainId));
+          const session = agent.getSession(Number(opts.chainId), opts.jobId);
           if (!session) {
             throw new Error(`No session found for job ${opts.jobId}.`);
           }
@@ -150,7 +139,7 @@ export function registerBuyerCommands(program: Command): void {
         const agent = await createAgentFromEnv();
         await agent.start();
         try {
-          const session = agent.getSession(opts.jobId, Number(opts.chainId));
+          const session = agent.getSession(Number(opts.chainId), opts.jobId);
           if (!session) {
             throw new Error(`No session found for job ${opts.jobId}.`);
           }

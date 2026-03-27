@@ -1,6 +1,6 @@
 import {
   AcpAgent,
-  ACP_CONTRACT_ADDRESS,
+  ACP_CONTRACT_ADDRESSES,
   AlchemyEvmProviderAdapter,
   PrivyAlchemyEvmProviderAdapter,
   SocketTransport,
@@ -57,8 +57,10 @@ export async function createAgentFromEnv(): Promise<AcpAgent> {
   const walletAddress = requireEnv("ACP_WALLET_ADDRESS");
   const socketUrl =
     process.env.ACP_SOCKET_SERVER_URL ?? "http://localhost:3000";
-  const contractAddress =
-    process.env.ACP_CONTRACT_ADDRESS ?? ACP_CONTRACT_ADDRESS;
+  const contractAddresses: Record<number, string> =
+    process.env.ACP_CONTRACT_ADDRESS
+      ? { [BASE_SEPOLIA_CHAIN.id]: process.env.ACP_CONTRACT_ADDRESS }
+      : ACP_CONTRACT_ADDRESSES;
 
   let provider;
 
@@ -82,12 +84,12 @@ export async function createAgentFromEnv(): Promise<AcpAgent> {
       walletAddress: walletAddress as `0x${string}`,
       privateKey: requireEnv("ACP_PRIVATE_KEY") as `0x${string}`,
       entityId: Number(process.env.ACP_ENTITY_ID ?? "1"),
-      chain: BASE_SEPOLIA_CHAIN as any,
+      chains: [BASE_SEPOLIA_CHAIN as any],
     });
   }
 
   return AcpAgent.create({
-    contractAddress,
+    contractAddresses,
     provider,
     transport: new SocketTransport({
       serverUrl: socketUrl,

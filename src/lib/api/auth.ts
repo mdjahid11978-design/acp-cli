@@ -72,7 +72,7 @@ export class AuthApi {
     if (!(acpClient instanceof EvmAcpClient)) {
       throw new Error("signMessage requires an EVM provider");
     }
-    const signature = await acpClient.getProvider().signMessage(message);
+    const signature = await acpClient.getProvider().signMessage(chainId, message);
 
     const authApi = new AuthApi(new ApiClient(baseUrl));
     return authApi.getAuthToken({ walletAddress, signature, message, chainId });
