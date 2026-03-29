@@ -50,16 +50,16 @@ async function resolveToken(
     }
     return token;
   }
-  const token = getToken();
+  const token = await getToken();
   if (!token) {
-    throw new Error("ACP_TOKEN is not set. Run `acp configure` first.");
+    throw new Error("Not authenticated. Run `acp configure` first.");
   }
 
   if (!isTokenExpired(token)) {
     return token;
   }
 
-  const refreshToken = getRefreshToken();
+  const refreshToken = await getRefreshToken();
   if (!refreshToken) {
     throw new Error("Session expired. Run `acp configure` to re-authenticate.");
   }
@@ -70,7 +70,7 @@ async function resolveToken(
     throw new Error("Session expired. Run `acp configure` to re-authenticate.");
   }
 
-  setTokens(result.token, result.refreshToken);
+  await setTokens(result.token, result.refreshToken);
   return result.token;
 }
 

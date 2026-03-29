@@ -1,8 +1,5 @@
 #!/usr/bin/env npx tsx
 import "dotenv/config";
-import { setupEnv } from "../src/lib/config";
-
-setupEnv();
 import { program } from "commander";
 import { registerBuyerCommands } from "../src/commands/buyer";
 import { registerSellerCommands } from "../src/commands/seller";

@@ -1,5 +1,8 @@
 import { readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
+import { getPassword, setPassword } from "cross-keychain";
+
+const AUTH_KEYCHAIN_SERVICE = "acp-auth";
 
 const CONFIG_PATH = resolve(process.cwd(), "config.json");
 
@@ -10,8 +13,6 @@ interface AgentConfig {
 }
 
 interface Config {
-  acp_token?: string;
-  acp_refresh_token?: string;
   activeWallet?: string;
   agents?: Record<string, AgentConfig>;
 }
@@ -28,30 +29,20 @@ function saveConfig(config: Config): void {
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
 }
 
-export function getToken(): string | undefined {
-  return loadConfig().acp_token;
+export async function getToken(): Promise<string | undefined> {
+  return (await getPassword(AUTH_KEYCHAIN_SERVICE, "access-token")) ?? undefined;
 }
 
-export function setupEnv(): void {
-  const token = getToken();
-  if (token) process.env.ACP_TOKEN = token;
+export async function getRefreshToken(): Promise<string | undefined> {
+  return (await getPassword(AUTH_KEYCHAIN_SERVICE, "refresh-token")) ?? undefined;
 }
 
-export function setToken(token: string): void {
-  const config = loadConfig();
-  config.acp_token = token;
-  saveConfig(config);
-}
-
-export function getRefreshToken(): string | undefined {
-  return loadConfig().acp_refresh_token;
-}
-
-export function setTokens(accessToken: string, refreshToken: string): void {
-  const config = loadConfig();
-  config.acp_token = accessToken;
-  config.acp_refresh_token = refreshToken;
-  saveConfig(config);
+export async function setTokens(
+  accessToken: string,
+  refreshToken: string
+): Promise<void> {
+  await setPassword(AUTH_KEYCHAIN_SERVICE, "access-token", accessToken);
+  await setPassword(AUTH_KEYCHAIN_SERVICE, "refresh-token", refreshToken);
 }
 
 export function getAgentToken(walletAddress: string): string | undefined {

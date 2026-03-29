@@ -78,7 +78,7 @@ export function registerConfigureCommand(program: Command): void {
         return;
       }
 
-      setTokens(result.token, result.refreshToken);
+      await setTokens(result.token, result.refreshToken);
 
       if (json) {
         outputResult(json, {
