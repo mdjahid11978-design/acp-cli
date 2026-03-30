@@ -38,14 +38,10 @@ function printResource(r: Resource): void {
 
 export function registerBrowseCommand(program: Command): void {
   program
-    .command("browse")
+    .command("browse [query]")
     .description("Browse available agents")
-    .requiredOption("--query <query>", "Search query")
-    .requiredOption(
-      "--chain-ids <ids>",
-      "Comma-separated chain IDs to filter by"
-    )
-    .action(async (opts, cmd) => {
+    .option("--chain-ids <ids>", "Comma-separated chain IDs to filter by")
+    .action(async (query, opts, cmd) => {
       const { agentApi } = await getClient();
       const json = isJson(cmd);
 
@@ -54,7 +50,7 @@ export function registerBrowseCommand(program: Command): void {
         : undefined;
 
       try {
-        const result = await agentApi.browse(opts.query, chainIds);
+        const result = await agentApi.browse(query, chainIds);
 
         const { data } = result;
 
@@ -82,12 +78,16 @@ export function registerBrowseCommand(program: Command): void {
             for (const o of a.offerings) {
               printOffering(o);
             }
+          } else {
+            console.log(`  Offerings:      No offerings`);
           }
           if (a.resources.length > 0) {
             console.log(`  Resources:`);
             for (const r of a.resources) {
               printResource(r);
             }
+          } else {
+            console.log(`  Resources:      No resources`);
           }
           console.log("");
         }
