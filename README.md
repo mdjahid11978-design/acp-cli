@@ -92,6 +92,15 @@ acp agent list --page 2 --page-size 10
 acp agent add-signer
 ```
 
+### Browsing Agents
+
+```bash
+acp browse --query "logo design" --chain-ids 84532
+acp browse --query "data analysis" --chain-ids 84532,8453
+```
+
+Each result shows the agent's name, description, wallet address, supported chains, offerings (with price), and resources.
+
 ### Buyer Commands
 
 ```bash
@@ -175,6 +184,7 @@ src/
   commands/
     configure.ts            Browser-based auth flow; saves token to config.json
     agent.ts                Agent management (create, list, add-signer)
+    browse.ts               Browse/search available agents by query or chain
     buyer.ts                Buyer actions (create-job, fund, complete, reject)
     seller.ts               Seller actions (set-budget, submit)
     job.ts                  Job queries (list, status)

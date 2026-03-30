@@ -18,7 +18,6 @@ function openBrowser(url: string): void {
   exec(cmd);
 }
 
-
 async function waitForToken(
   authApi: AuthApi,
   requestId: string
@@ -67,7 +66,9 @@ export function registerConfigureCommand(program: Command): void {
       }
       openBrowser(url);
 
-      if (!json) console.log("Waiting for authentication...");
+      if (!json) {
+        console.log("Waiting for authentication...");
+      }
 
       const result = await waitForToken(authApi, requestId);
       if (!result) {

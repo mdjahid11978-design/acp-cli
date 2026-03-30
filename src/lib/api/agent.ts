@@ -52,6 +52,61 @@ interface AddQuorumResponse {
   data: string; // keyQuorumId
 }
 
+export interface BrowseAgent {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  userId: string;
+  walletAddress: string;
+  solWalletAddress: string | null;
+  role: string;
+  cluster: string | null;
+  tag: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastActiveAt: string | null;
+  rating: number | null;
+  isHidden: boolean;
+  chains: {
+    id: string;
+    agentId: string;
+    chainId: number;
+    tokenAddress: string;
+    virtualAgentId: string | null;
+    acpV2AgentId: number | null;
+    symbol: string;
+    active: boolean;
+    erc8004AgentId: number | null;
+  }[];
+  offerings: {
+    id: string;
+    agentId: string;
+    name: string;
+    description: string;
+    requirements: unknown;
+    deliverable: unknown;
+    slaMinutes: number;
+    priceType: string;
+    priceValue: string;
+    requiredFunds: boolean;
+    isHidden: boolean;
+    isPrivate: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }[];
+  resources: {
+    id: string;
+    name: string;
+    description: string;
+    params: unknown;
+    url: string;
+  }[];
+}
+
+interface AgentBrowseResponse {
+  data: BrowseAgent[];
+}
 
 export class AgentApi {
   private client: ApiClient;
@@ -83,6 +138,16 @@ export class AgentApi {
     return this.client.post<AddQuorumResponse>(`/agents/${agentId}/quorum`, {
       publicKey,
     });
+  }
+
+  async browse(
+    query?: string,
+    chainIds?: number[]
+  ): Promise<AgentBrowseResponse> {
+    const params: Record<string, string> = {};
+    if (query) params.query = query;
+    if (chainIds && chainIds.length > 0) params.chainIds = chainIds.join(",");
+    return this.client.get<AgentBrowseResponse>("/agents/search", params);
   }
 
   async addSigner(
