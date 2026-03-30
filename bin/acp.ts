@@ -4,7 +4,7 @@ import { program } from "commander";
 import { registerBuyerCommands } from "../src/commands/buyer";
 import { registerSellerCommands } from "../src/commands/seller";
 import { registerJobCommands } from "../src/commands/job";
-import { registerListenCommand } from "../src/commands/listen";
+import { registerEventsCommand } from "../src/commands/events";
 import { registerMessageCommands } from "../src/commands/message";
 import { registerWalletCommands } from "../src/commands/wallet";
 import { registerConfigureCommand } from "../src/commands/configure";
@@ -20,7 +20,7 @@ program
 registerBuyerCommands(program);
 registerSellerCommands(program);
 registerJobCommands(program);
-registerListenCommand(program);
+registerEventsCommand(program);
 registerMessageCommands(program);
 registerWalletCommands(program);
 registerConfigureCommand(program);

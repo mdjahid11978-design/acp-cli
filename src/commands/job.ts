@@ -1,12 +1,11 @@
 import type { Command } from "commander";
 import { isJson, outputResult, outputError } from "../lib/output";
-import { getWalletAddress, getSocketUrl } from "../lib/agentFactory";
-import { getActiveJobs, getJobHistory } from "../lib/rest";
+import { getWalletAddress } from "../lib/agentFactory";
 import { getClient } from "../lib/api/client";
 import { formatUnits } from "viem";
 
 export function registerJobCommands(program: Command): void {
-  const job = program.command("job").description("Job queries (status, list)");
+  const job = program.command("job").description("Job queries (history, list)");
 
   job
     .command("list")
@@ -47,19 +46,19 @@ export function registerJobCommands(program: Command): void {
     });
 
   job
-    .command("status")
+    .command("history")
     .description(
-      "Get job status and message history (REST, no socket connection needed)"
+      "Get full job history including status and all messages (REST, no socket connection needed)"
     )
     .requiredOption("--job-id <id>", "On-chain job ID")
-    .option("--chain-id <id>", "Chain ID", "84532")
+    .requiredOption("--chain-id <id>", "Chain ID", "84532")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
         const wallet = getWalletAddress();
 
         const { jobApi } = await getClient(wallet);
-        const entries = await jobApi.getJobHistory(
+        const entries = await jobApi.getChatHistory(
           Number(opts.chainId),
           opts.jobId
         );

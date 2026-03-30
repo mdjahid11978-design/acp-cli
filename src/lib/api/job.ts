@@ -43,9 +43,12 @@ export class JobApi {
     return res.jobs ?? [];
   }
 
-  async getJobHistory(chainId: number, jobId: string): Promise<JobRoomEntry[]> {
+  async getChatHistory(
+    chainId: number,
+    jobId: string
+  ): Promise<JobRoomEntry[]> {
     const res = await this.client.get<JobHistoryResponse>(
-      `/jobs/${chainId}/${jobId}/history`,
+      `/chats/${chainId}/${jobId}/history`,
       { wallet: this.walletAddress }
     );
     return res.entries ?? [];
