@@ -141,12 +141,14 @@ export class AgentApi {
     return this.client.get<AgentListResponse>("/agents", params);
   }
 
-  async create(name: string, description: string): Promise<Agent> {
-    const res = await this.client.post<AgentCreateResponse>("/agents", {
-      name,
-      description,
-      role: "HYBRID",
-    });
+  async create(
+    name: string,
+    description: string,
+    image?: string
+  ): Promise<Agent> {
+    const body: Record<string, unknown> = { name, description, role: "HYBRID" };
+    if (image) body.image = image;
+    const res = await this.client.post<AgentCreateResponse>("/agents", body);
     return res.data;
   }
 

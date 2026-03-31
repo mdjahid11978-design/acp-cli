@@ -110,6 +110,7 @@ export function registerAgentCommands(program: Command): void {
 
       let name: string;
       let description: string;
+      let image: string | undefined;
 
       try {
         name = (await prompt(rl, "Agent name: ")).trim();
@@ -123,13 +124,20 @@ export function registerAgentCommands(program: Command): void {
           outputError(json, "Agent description cannot be empty.");
           return;
         }
+
+        const imageInput = (
+          await prompt(rl, "Agent image URL (optional, press Enter to skip): ")
+        ).trim();
+        if (imageInput) {
+          image = imageInput;
+        }
       } finally {
         rl.close();
       }
 
       let created: Agent;
       try {
-        created = await agentApi.create(name, description);
+        created = await agentApi.create(name, description, image);
       } catch (err) {
         outputError(
           json,
@@ -166,27 +174,7 @@ export function registerAgentCommands(program: Command): void {
         return;
       }
 
-      const rl2 = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-      let addSigner: string;
-      try {
-        addSigner = (
-          await prompt(
-            rl2,
-            "\nDo you want to add a signer to this agent? (y/N): "
-          )
-        )
-          .trim()
-          .toLowerCase();
-      } finally {
-        rl2.close();
-      }
-
-      if (addSigner === "y" || addSigner === "yes") {
-        await runAddSignerFlow(agentApi, json, created);
-      }
+      await runAddSignerFlow(agentApi, json, created);
     });
 
   agent
