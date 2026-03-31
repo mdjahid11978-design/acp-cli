@@ -1,12 +1,29 @@
 import * as readline from "readline";
 import type { Command } from "commander";
 import { isJson, outputResult, outputError } from "../lib/output";
-import { AgentApi, type Agent } from "../lib/api/agent";
+import {
+  AgentApi,
+  TokenizeResponse,
+  TokenizeStatusResponse,
+  type Agent,
+} from "../lib/api/agent";
 import { getClient } from "../lib/api/client";
-import { prompt, selectFromList, printTable } from "../lib/prompt";
-import { setPublicKey, setWalletId, setActiveWallet } from "../lib/config";
+import {
+  prompt,
+  selectFromList,
+  selectOption,
+  printTable,
+} from "../lib/prompt";
+import {
+  setPublicKey,
+  setWalletId,
+  setActiveWallet,
+  getActiveWallet,
+} from "../lib/config";
 import { generateP256KeyPair } from "@privy-io/node";
 import { storeSignerKey } from "../lib/signerKeychain";
+import { createAgentFromConfig } from "../lib/agentFactory";
+import { EvmAcpClient, SUPPORTED_CHAINS } from "acp-node-v2";
 
 async function runAddSignerFlow(
   api: AgentApi,
@@ -293,5 +310,166 @@ export function registerAgentCommands(program: Command): void {
       console.log(`\nSelected: ${selected.name} ${selected.walletAddress}`);
 
       await runAddSignerFlow(agentApi, json, selected);
+    });
+
+  agent
+    .command("tokenize")
+    .description("Tokenize an agent on a blockchain")
+    .action(async (_opts, cmd) => {
+      const { agentApi } = await getClient();
+      const json = isJson(cmd);
+
+      // Step 1: Select agent
+      let agents: Agent[];
+      try {
+        const result = await agentApi.list();
+        agents = result.data;
+      } catch (err) {
+        outputError(
+          json,
+          `Failed to fetch agents: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      }
+
+      if (agents.length === 0) {
+        outputError(json, "No agents found. Run `acp agent create` first.");
+        return;
+      }
+
+      const selected = await selectFromList(
+        "Choose the agent to tokenize:",
+        agents
+      );
+
+      // Step 2: Select chain
+      const selectedChain = await selectOption(
+        "\nChoose a chain to tokenize on:",
+        SUPPORTED_CHAINS,
+        (chain) => chain.name
+      );
+
+      // Check tokenize status
+      let tokenizeDetails: TokenizeStatusResponse;
+      try {
+        tokenizeDetails = await agentApi.getTokenizeDetails(
+          selected.id,
+          selectedChain.id
+        );
+      } catch (err) {
+        outputError(
+          json,
+          `Failed to fetch tokenize details: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      }
+
+      if (tokenizeDetails.hasTokenized) {
+        outputError(json, `${selected.name} has already been tokenized.`);
+        return;
+      }
+
+      // Step 3: Input token symbol
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+
+      let symbol: string;
+      try {
+        symbol = (await prompt(rl, "\nEnter token symbol: "))
+          .trim()
+          .toUpperCase();
+        if (!symbol) {
+          outputError(json, "Token symbol cannot be empty.");
+          return;
+        }
+      } finally {
+        rl.close();
+      }
+
+      // Step 4: Pay if not already paid
+      let txHash = "";
+
+      if (tokenizeDetails.hasPaid) {
+        console.log("\nPayment already received, skipping transfer.");
+      } else {
+        const previousWallet = getActiveWallet();
+        setActiveWallet(selected.walletAddress);
+
+        try {
+          console.log(`Sending payment for tokenization...`);
+
+          const acpAgent = await createAgentFromConfig();
+          const client = acpAgent.getClient();
+
+          if (!(client instanceof EvmAcpClient)) {
+            outputError(
+              json,
+              "Only EVM chains are supported for tokenization."
+            );
+            return;
+          }
+
+          const provider = client.getProvider();
+
+          const result = await provider.sendCalls(selectedChain.id, [
+            {
+              to: tokenizeDetails.paymentToken as `0x${string}`,
+              data: tokenizeDetails.paymentData as `0x${string}`,
+            },
+          ]);
+
+          txHash = Array.isArray(result) ? result[0] : result;
+        } catch (err) {
+          outputError(
+            json,
+            `Failed to send payment: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+          return;
+        } finally {
+          if (previousWallet) setActiveWallet(previousWallet);
+        }
+      }
+
+      // Step 5: Call tokenize API
+      let tokenizeResponse: TokenizeResponse;
+      try {
+        console.log(`Tokenizing your agent on chain ID ${selectedChain.id}...`);
+
+        tokenizeResponse = await agentApi.tokenize(
+          selected.id,
+          selectedChain.id,
+          symbol,
+          txHash
+        );
+      } catch (err) {
+        outputError(
+          json,
+          `Failed to tokenize agent: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      }
+
+      if (!json) {
+        console.log(
+          `\nAgent ${selected.name} tokenized successfully as $${symbol}, token address: ${tokenizeResponse.preToken}`
+        );
+      } else {
+        outputResult(json, {
+          success: true,
+          agentId: selected.id,
+          agentName: selected.name,
+          tokenizeResponse,
+        });
+      }
     });
 }

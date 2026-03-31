@@ -108,6 +108,25 @@ interface AgentBrowseResponse {
   data: BrowseAgent[];
 }
 
+export interface TokenizeStatusResponse {
+  hasTokenized: boolean;
+  hasPaid: boolean;
+  paymentToken: string;
+  paymentAmount: string;
+  paymentData: string;
+}
+
+export interface TokenizeResponse {
+  id: number;
+  name: string;
+  symbol: string;
+  status: string;
+  factory: string;
+  launchedAt: string;
+  preToken: string;
+  taxRecipient: string;
+}
+
 export class AgentApi {
   private client: ApiClient;
 
@@ -159,5 +178,31 @@ export class AgentApi {
       walletId,
       keyQuorumId,
     });
+  }
+
+  async getTokenizeDetails(
+    agentId: string,
+    chainId: number
+  ): Promise<TokenizeStatusResponse> {
+    return this.client.get<TokenizeStatusResponse>(
+      `/agents/${agentId}/tokenize?chainId=${chainId}`
+    );
+  }
+
+  async tokenize(
+    agentId: string,
+    chainId: number,
+    symbol: string,
+    txHash?: string
+  ): Promise<TokenizeResponse> {
+    const res = await this.client.post<{ data: TokenizeResponse }>(
+      `/agents/${agentId}/tokenize`,
+      {
+        chainId,
+        symbol,
+        txHash,
+      }
+    );
+    return res.data;
   }
 }
