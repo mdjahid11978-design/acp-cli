@@ -2,7 +2,6 @@ import {
   AcpAgent,
   ACP_CONTRACT_ADDRESSES,
   PrivyAlchemyEvmProviderAdapter,
-  SocketTransport,
 } from "acp-node-v2";
 import {
   getActiveWallet,
@@ -77,9 +76,6 @@ export async function createAgentFromConfig(): Promise<AcpAgent> {
   return AcpAgent.create({
     contractAddresses: ACP_CONTRACT_ADDRESSES,
     provider,
-    transport: new SocketTransport({
-      serverUrl: process.env.ACP_API_URL,
-    }),
   });
 }
 
