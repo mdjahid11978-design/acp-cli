@@ -9,6 +9,25 @@ export interface AddSignerResponse {
   };
 }
 
+export interface AgentOffering {
+  id: string;
+  agentId: string;
+  name: string;
+  description: string;
+  slaMinutes: number;
+  priceType: string;
+  priceValue: string;
+  isHidden: boolean;
+  isPrivate: boolean;
+}
+
+export interface AgentResource {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -21,12 +40,18 @@ export interface Agent {
   tags: string[] | null;
   createdAt: string;
   updatedAt: string;
-  offerings: unknown[];
+  offerings: AgentOffering[];
+  resources: AgentResource[];
+  isHidden: boolean;
   walletProviders: {
     provider: string;
     metadata: {
       walletId: string;
     };
+  }[];
+  chains: {
+    chainId: number;
+    tokenAddress?: string;
   }[];
 }
 
@@ -132,6 +157,11 @@ export class AgentApi {
 
   constructor(client: ApiClient) {
     this.client = client;
+  }
+
+  async getById(id: string): Promise<Agent> {
+    const res = await this.client.get<{ data: Agent }>(`/agents/${id}`);
+    return res.data;
   }
 
   async list(page?: number, pageSize?: number): Promise<AgentListResponse> {

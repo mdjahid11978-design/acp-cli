@@ -10,6 +10,7 @@ interface AgentConfig {
   publicKey: string;
   token?: string;
   walletId?: string;
+  id?: string;
 }
 
 interface Config {
@@ -78,6 +79,18 @@ export function setPublicKey(agentAddress: string, publicKey: string): void {
   config.agents ??= {};
   config.agents[agentAddress] ??= { publicKey: "" };
   config.agents[agentAddress].publicKey = publicKey;
+  saveConfig(config);
+}
+
+export function getAgentId(walletAddress: string): string | undefined {
+  return loadConfig().agents?.[walletAddress]?.id;
+}
+
+export function setAgentId(walletAddress: string, id: string): void {
+  const config = loadConfig();
+  config.agents ??= {};
+  config.agents[walletAddress] ??= { publicKey: "" };
+  config.agents[walletAddress].id = id;
   saveConfig(config);
 }
 

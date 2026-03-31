@@ -19,6 +19,8 @@ import {
   setWalletId,
   setActiveWallet,
   getActiveWallet,
+  setAgentId,
+  getAgentId,
 } from "../lib/config";
 import { generateP256KeyPair } from "@privy-io/node";
 import { storeSignerKey } from "../lib/signerKeychain";
@@ -150,6 +152,7 @@ export function registerAgentCommands(program: Command): void {
 
       if (created.walletAddress) {
         setActiveWallet(created.walletAddress);
+        setAgentId(created.walletAddress, created.id);
       }
 
       if (json) {
@@ -204,6 +207,7 @@ export function registerAgentCommands(program: Command): void {
         }
 
         for (const a of data) {
+          if (a.walletAddress) setAgentId(a.walletAddress, a.id);
           console.log(`\n  ID:             ${a.id}`);
           console.log(`  Name:           ${a.name}`);
           console.log(`  Description:    ${a.description}`);
@@ -257,6 +261,7 @@ export function registerAgentCommands(program: Command): void {
       );
 
       setActiveWallet(selected.walletAddress);
+      setAgentId(selected.walletAddress, selected.id);
 
       outputResult(json, {
         success: true,
@@ -298,6 +303,95 @@ export function registerAgentCommands(program: Command): void {
       console.log(`\nSelected: ${selected.name} ${selected.walletAddress}`);
 
       await runAddSignerFlow(agentApi, json, selected);
+    });
+
+  agent
+    .command("whoami")
+    .description("Show details of the currently active agent")
+    .action(async (_opts, cmd) => {
+      const { agentApi } = await getClient();
+      const json = isJson(cmd);
+
+      const activeWallet = getActiveWallet();
+      if (!activeWallet) {
+        outputError(json, "No active agent set. Run `acp agent use` first.");
+        return;
+      }
+
+      const agentId = getAgentId(activeWallet);
+      if (!agentId) {
+        outputError(
+          json,
+          "Agent ID not found for active wallet. Run `acp agent list` or `acp agent use` to populate it."
+        );
+        return;
+      }
+
+      let agentData: Awaited<ReturnType<typeof agentApi.getById>>;
+      try {
+        agentData = await agentApi.getById(agentId);
+      } catch (err) {
+        outputError(
+          json,
+          `Failed to fetch agent: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      }
+
+      if (json) {
+        outputResult(json, agentData as unknown as Record<string, unknown>);
+        return;
+      }
+
+      const chainRows: [string, string][] = (agentData.chains ?? []).map(
+        (c, i) => [`Chain ${c.chainId}`, `${c.tokenAddress ?? "Not tokenized"}`]
+      );
+
+      console.log("\nAgent Details:");
+      printTable([
+        ["ID", agentData.id],
+        ["Name", agentData.name],
+        ["Description", agentData.description],
+        ["Role", agentData.role],
+        ["Wallet Address", agentData.walletAddress ?? "N/A"],
+        ["Hidden", agentData.isHidden ? "Yes" : "No"],
+        ["Image", agentData.imageUrl ?? "N/A"],
+        ["Created", agentData.createdAt],
+        ...chainRows,
+      ]);
+
+      console.log("\nOfferings:");
+      if (agentData.offerings?.length) {
+        for (const o of agentData.offerings) {
+          printTable([
+            ["ID", o.id],
+            ["Name", o.name],
+            ["Description", o.description],
+            ["Price", `${o.priceValue} (${o.priceType})`],
+            ["SLA", `${o.slaMinutes} min`],
+            ["Hidden", o.isHidden ? "Yes" : "No"],
+            ["Private", o.isPrivate ? "Yes" : "No"],
+          ]);
+        }
+      } else {
+        console.log("  N/A");
+      }
+
+      console.log("\nResources:");
+      if (agentData.resources?.length) {
+        for (const r of agentData.resources) {
+          printTable([
+            ["ID", r.id],
+            ["Name", r.name],
+            ["Description", r.description],
+            ["URL", r.url],
+          ]);
+        }
+      } else {
+        console.log("  N/A");
+      }
     });
 
   agent
