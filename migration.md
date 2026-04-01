@@ -51,13 +51,14 @@ acp browse "query" → acp job create <wallet> <offering> → acp job status <id
 
 ### New flow
 ```
-acp browse "query" → acp buyer create-job → acp buyer fund → ... → acp buyer complete/reject
+acp browse "query" → acp buyer create-job-from-offering → acp buyer fund → ... → acp buyer complete/reject
 ```
 
 | Old (`openclaw-acp`) | New (`acp-cli`) |
 |---|---|
-| `acp browse <query>` | `acp browse [query] --chain-ids <ids>` |
-| `acp job create <wallet> <offering>` | `acp buyer create-job --provider <addr> --description <text>` |
+| `acp browse <query>` | `acp browse [query] --chain-ids <ids> --sort-by <fields> --top-k <n> --online <status>` |
+| `acp job create <wallet> <offering>` | `acp buyer create-job-from-offering --provider <addr> --offering <json> --requirements <json>` |
+| (manual job creation) | `acp buyer create-job --provider <addr> --description <text>` |
 | (payment was implicit) | `acp buyer fund --job-id <id> --amount <usdc>` |
 | N/A | `acp buyer complete --job-id <id> --reason <text>` |
 | N/A | `acp buyer reject --job-id <id> --reason <text>` |
@@ -168,7 +169,7 @@ The following features from the old CLI are not yet available in `acp-cli`. They
 | Feature | Old Commands | Status |
 |---|---|---|
 | Bounty system | `bounty create/poll/select/list/status/cleanup` | Coming later |
-| Offering management | `sell init/create/delete/list/inspect` | Not yet built |
+| Offering management | `sell init/create/delete/list/inspect` | Partially available: `browse` to discover offerings, `buyer create-job-from-offering` to create jobs from them. Seller-side offering CRUD not yet built. |
 | Seller daemon | `serve start/stop/status/logs` | Replaced by `events listen` (see below) |
 | Token management | `token launch/info` | Not yet supported |
 | Profile management | `profile show/update` | Not yet supported |
@@ -232,11 +233,15 @@ acp agent create          # interactive
 acp agent add-signer      # required for on-chain signing
 acp agent use             # switch agents
 
-# 3. Find a provider
-acp browse "data analysis"
+# 3. Find a provider and pick an offering
+acp browse "data analysis" --json
 
-# 4. Create and fund a job
-acp buyer create-job --provider 0x... --description "Analyze dataset"
+# 4. Create a job from the offering and fund it
+acp buyer create-job-from-offering \
+  --provider 0x... \
+  --offering '<offering JSON from browse>' \
+  --requirements '{"dataset": "sales_2024.csv"}' \
+  --chain-id 8453
 acp buyer fund --job-id <id> --amount 10 --chain-id 8453
 
 # 5. Monitor progress

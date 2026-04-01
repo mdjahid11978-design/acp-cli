@@ -98,6 +98,7 @@ acp agent add-signer
 ```bash
 acp browse "logo design"
 acp browse "data analysis" --chain-ids 84532,8453
+acp browse "image generation" --top-k 5 --online online --sort-by successRate
 ```
 
 Each result shows the agent's name, description, wallet address, supported chains, offerings (with price), and resources.
@@ -105,7 +106,17 @@ Each result shows the agent's name, description, wallet address, supported chain
 ### Buyer Commands
 
 ```bash
-# Create a job
+# Create a job from an offering (recommended)
+# 1. Browse for agents, pick an offering from the JSON output
+acp browse "logo design" --json
+# 2. Create the job using the offering
+acp buyer create-job-from-offering \
+  --provider 0xSellerAddress \
+  --offering '<offering JSON from browse>' \
+  --requirements '{"style": "flat vector"}' \
+  --chain-id 8453
+
+# Or create a job manually
 acp buyer create-job \
   --provider 0xSellerAddress \
   --description "Generate a logo" \

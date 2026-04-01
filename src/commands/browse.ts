@@ -41,6 +41,10 @@ export function registerBrowseCommand(program: Command): void {
     .command("browse [query]")
     .description("Browse available agents")
     .option("--chain-ids <ids>", "Comma-separated chain IDs to filter by")
+    .option("--sort-by <fields>", "Comma-separated sort fields: successfulJobCount, successRate, uniqueBuyerCount, minsFromLastOnlineTime")
+    .option("--top-k <n>", "Max number of results", parseInt)
+    .option("--online <status>", "Filter by online status: all, online, offline")
+    .option("--cluster <name>", "Filter by cluster")
     .action(async (query, opts, cmd) => {
       const { agentApi } = await getClient();
       const json = isJson(cmd);
@@ -49,8 +53,17 @@ export function registerBrowseCommand(program: Command): void {
         ? opts.chainIds.split(",").map((id: string) => parseInt(id.trim(), 10))
         : undefined;
 
+      const sortBy = opts.sortBy
+        ? opts.sortBy.split(",").map((s: string) => s.trim())
+        : undefined;
+
       try {
-        const result = await agentApi.browse(query, chainIds);
+        const result = await agentApi.browse(query, chainIds, {
+          sortBy,
+          topK: opts.topK,
+          isOnline: opts.online,
+          cluster: opts.cluster,
+        });
 
         const { data } = result;
 

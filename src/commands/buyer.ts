@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import type { AcpAgentOffering } from "acp-node-v2";
 import { AssetToken } from "acp-node-v2";
 import { createAgentFromConfig } from "../lib/agentFactory";
 import { isJson, outputResult, outputError } from "../lib/output";
@@ -149,6 +150,60 @@ export function registerBuyerCommands(program: Command): void {
             action: "reject",
             jobId: opts.jobId,
             reason: opts.reason,
+          });
+        } finally {
+          await agent.stop();
+        }
+      } catch (err) {
+        outputError(json, err instanceof Error ? err.message : String(err));
+      }
+    });
+
+  buyer
+    .command("create-job-from-offering")
+    .description(
+      "Create a job from a provider's offering (validates requirements, auto-calculates expiry)"
+    )
+    .requiredOption("--provider <address>", "Provider (seller) wallet address")
+    .requiredOption("--offering <json>", "Offering JSON object (from browse output)")
+    .requiredOption("--requirements <json>", "Requirements JSON matching the offering schema")
+    .requiredOption("--chain-id <id>", "Chain ID", "8453")
+    .option("--evaluator <address>", "Evaluator wallet address (defaults to your own)")
+    .action(async (opts, cmd) => {
+      const json = isJson(cmd);
+      try {
+        let offering: AcpAgentOffering;
+        try {
+          offering = JSON.parse(opts.offering);
+        } catch {
+          throw new Error("Invalid --offering JSON");
+        }
+
+        let requirements: Record<string, unknown> | string;
+        try {
+          requirements = JSON.parse(opts.requirements);
+        } catch {
+          requirements = opts.requirements;
+        }
+
+        const agent = await createAgentFromConfig();
+        await agent.start();
+        try {
+          const evaluator = opts.evaluator ?? (await agent.getAddress());
+          const jobId = await agent.createJobFromOffering(
+            Number(opts.chainId),
+            offering,
+            opts.provider,
+            requirements,
+            { evaluatorAddress: evaluator }
+          );
+
+          outputResult(json, {
+            success: true,
+            action: "create-job-from-offering",
+            jobId: jobId.toString(),
+            provider: opts.provider,
+            offering: offering.name,
           });
         } finally {
           await agent.stop();

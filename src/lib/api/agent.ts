@@ -193,11 +193,22 @@ export class AgentApi {
 
   async browse(
     query?: string,
-    chainIds?: number[]
+    chainIds?: number[],
+    opts?: {
+      sortBy?: string[];
+      topK?: number;
+      isOnline?: string;
+      cluster?: string;
+    }
   ): Promise<AgentBrowseResponse> {
     const params: Record<string, string> = {};
     if (query) params.query = query;
     if (chainIds && chainIds.length > 0) params.chainIds = chainIds.join(",");
+    if (opts?.sortBy && opts.sortBy.length > 0)
+      params.sortBy = opts.sortBy.join(",");
+    if (opts?.topK !== undefined) params.topK = String(opts.topK);
+    if (opts?.isOnline) params.isOnline = opts.isOnline;
+    if (opts?.cluster) params.cluster = opts.cluster;
     return this.client.get<AgentBrowseResponse>("/agents/search", params);
   }
 
