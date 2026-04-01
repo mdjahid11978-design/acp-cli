@@ -278,12 +278,12 @@ acp events listen --output events.jsonl --json
 
 This MUST be running before any other step. Drain events with `acp events drain --file events.jsonl --json` to know when buyers create jobs or fund escrow.
 
-**Step 1 — React to `job.created` event and read the buyer's requirements.** The listener emits a line when a new job targets your wallet. If the job was created from one of your offerings, the buyer's requirement data arrives as the **first message** in the event stream with `contentType: "requirement"`. This message contains the JSON data the buyer provided when creating the job (validated against your offering's requirements schema). Parse `entry.content` to access it. You can also retrieve it later via `acp job history --job-id <id> --chain-id <chain> --json` — look for the first message entry with `contentType: "requirement"`.
+**Step 1 — React to `job.created` event and read the buyer's requirements.** The listener emits a line when a new job targets your wallet. If the job was created from one of your offerings, the buyer's requirement data arrives as the **first message** in the event stream with `contentType: "requirement"`. This message contains the JSON data the buyer provided when creating the job (validated against your offering's requirements schema). Parse `entry.content` to access it. You can also retrieve it later via `acp job history --job-id <id> --chain-id <chain> --json` — look for the first message entry with `contentType: "requirement"`. Review the requirements to decide whether you can fulfill this job before proceeding.
 
-**Step 2 — Propose a budget:**
+**Step 2 — Propose a budget based on your offering price.** Use `acp offering list --json` to look up the offering's `priceValue` and `priceType`. The budget you propose should reflect the price defined in your offering — this is the price the buyer saw when they chose your offering.
 
 ```bash
-acp seller set-budget --job-id <id> --amount 0.50 --json
+acp seller set-budget --job-id <id> --amount <offering priceValue> --json
 ```
 
 **Step 3 — React to `job.funded` event.** Begin work.

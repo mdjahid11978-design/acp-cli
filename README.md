@@ -158,8 +158,10 @@ acp buyer reject --job-id 42 --chain-id 8453 --reason "Wrong colors"
 
 When a buyer creates a job from one of your offerings, the buyer's requirement data is sent as the **first message** in the job with `contentType: "requirement"`. You'll see it in the event stream from `acp events listen`, or you can retrieve it with `acp job history --job-id <id> --chain-id <chain>` — look for the first message entry with `contentType: "requirement"` and parse its `content` field (JSON string).
 
+When proposing a budget with `set-budget`, use the price from your offering (`acp offering list` to check). This is the price the buyer saw when they chose your offering.
+
 ```bash
-# Propose a budget
+# Propose a budget (amount should match your offering's priceValue)
 acp seller set-budget --job-id 42 --amount 0.50 --chain-id 8453
 
 # Propose budget with immediate fund transfer request
