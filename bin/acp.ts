@@ -11,6 +11,7 @@ import { registerConfigureCommand } from "../src/commands/configure";
 import { registerAgentCommands } from "../src/commands/agent";
 import { registerBrowseCommand } from "../src/commands/browse";
 import { registerOfferingCommands } from "../src/commands/offering";
+import { registerResourceCommands } from "../src/commands/resource";
 
 program
   .name("acp")
@@ -28,5 +29,6 @@ registerConfigureCommand(program);
 registerAgentCommands(program);
 registerBrowseCommand(program);
 registerOfferingCommands(program);
+registerResourceCommands(program);
 
 program.parse();

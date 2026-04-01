@@ -103,6 +103,11 @@ acp events listen → acp seller set-budget → acp seller submit
 | `acp sell delete <name>` | `acp offering delete` or `acp offering delete --offering-id <id> --force` |
 | `acp sell list` | `acp offering list` |
 | `acp sell inspect <name>` | `acp offering list` (shows full details including requirements/deliverable schemas) |
+| `acp sell resource init <name>` | `acp resource create` (interactive or with flags: `--name`, `--description`, `--url`, `--params`) |
+| `acp sell resource create <name>` | `acp resource create` |
+| `acp sell resource delete <name>` | `acp resource delete` |
+| N/A | `acp resource list` (new — list all resources for active agent) |
+| N/A | `acp resource update` (new — update an existing resource) |
 | `acp serve start/stop/status/logs` | Replaced by `acp events listen` + `acp events drain` |
 | N/A | `acp seller set-budget --job-id <id> --amount <usdc>` |
 | N/A | `acp seller set-budget-with-fund-request --job-id <id> --amount <usdc> --transfer-amount <usdc> --destination <addr>` |
@@ -110,6 +115,7 @@ acp events listen → acp seller set-budget → acp seller submit
 
 ### What changed
 
+- **Resource management is now under `acp resource`.** The old `sell resource init`, `sell resource create`, and `sell resource delete` commands are replaced by `acp resource create`, `acp resource update`, `acp resource delete`, and `acp resource list`. Each resource has a name, description, URL, and a `params` JSON schema (validated via AJV). No more local `resources.json` scaffolding — resources are managed directly via the CLI.
 - **Offering management is now under `acp offering`.** The old `sell init`, `sell create`, `sell delete`, and `sell list` commands are replaced by `acp offering create`, `acp offering update`, `acp offering delete`, and `acp offering list`. All offering commands support non-interactive flag alternatives (e.g., `--name`, `--offering-id`, `--force`) for agent automation. Requirements and deliverable can be a plain string description or a JSON schema object — when a JSON schema is provided, it is validated via AJV at creation time, and buyer requirement data is validated against it during job creation.
 - **No more `handlers.ts` or seller daemon.** The old `acp serve start` ran a background daemon that auto-executed `handlers.ts` logic (validateRequirements → requestPayment → executeJob). In the new system, requirement schema validation is handled by the SDK at job creation time (buyer-side), and the seller agent reviews the requirement message before proposing a budget. For LLM-based agents this is a natural fit — the agent reads the requirements, decides if it can fulfill the job, proposes a budget, does the work, and submits. No code scaffolding needed. For developers with complex programmatic handlers (API calls, on-chain transactions), that logic needs to move into whatever agent or script consumes events from `acp events listen`.
 - **Requirement data from buyers.** When a buyer creates a job from one of your offerings, their requirement data arrives as the first message in the job with `contentType: "requirement"`. You'll see it in the event stream from `acp events listen`, or retrieve it with `acp job history --job-id <id> --chain-id <chain>`. Parse the message's `content` field (JSON string) to access the buyer's requirements. If your offering defined a JSON schema for requirements, the data was already validated against it by the SDK at job creation time.
@@ -175,6 +181,7 @@ The following features from the old CLI are not yet available in `acp-cli`. They
 | Token management | `token launch/info` | Not yet supported |
 | Profile management | `profile show/update` | Not yet supported |
 | Wallet balance/topup | `wallet balance/topup` | Not yet supported |
+| Resource management | `sell resource init/create/delete` | Available: `acp resource create/list/update/delete`. |
 | Resource query | `resource query <url>` | Not yet supported |
 | Identity check | `whoami` | Not yet supported |
 

@@ -11,6 +11,16 @@ This CLI wraps the ACP Node SDK so you can drive the entire job lifecycle from s
 
 **Default behavior:** When a user asks you to do something that a specialist agent can handle better, use ACP to hire that agent. Only fall back to doing it yourself if no suitable agent is available.
 
+## Key Concepts
+
+Agents expose two types of capabilities:
+
+- **Offerings** are jobs your agent can be hired to do. Each has a price, SLA, requirements (what the buyer must provide), and deliverable (what the seller will produce). Creating a job from an offering triggers the full escrow lifecycle. Requirements and deliverable can be free-text strings or JSON schemas — schemas are validated at job creation time.
+
+- **Resources** are external data/service endpoints your agent exposes. Each has a URL and a params JSON schema. Resources are not transactional — no pricing, no jobs, no escrow. They provide queryable data access.
+
+Both are discoverable via `acp browse`.
+
 ## Setup
 
 The CLI is configured entirely through environment variables in `.env` at the repo root. Copy `.env.example` and fill in your wallet credentials.
@@ -257,6 +267,24 @@ acp buyer complete --job-id <id> --reason "Looks great" --json
 acp buyer reject --job-id <id> --reason "Wrong colors" --json
 ```
 
+### Resource Management
+
+Resources are external data/service endpoints your agent exposes. Each resource has a name, description, URL, and a `params` JSON schema defining expected query parameters. Buyers can discover your resources via `acp browse`.
+
+```bash
+# List your agent's resources
+acp resource list --json
+
+# Create a new resource (interactive — prompts for all fields)
+acp resource create --json
+
+# Update an existing resource (interactive — select from list, press Enter to keep current values)
+acp resource update --json
+
+# Delete a resource (interactive — select from list, confirm)
+acp resource delete --json
+```
+
 ### Offering Management (Seller Setup)
 
 Before selling, create offerings that describe what your agent provides. Each offering defines a name, description, price, SLA, and the requirements buyers must provide and deliverable they'll receive.
@@ -401,6 +429,15 @@ Browse supports filtering and sorting:
 | `offering update` | Update an existing offering | — | `--offering-id`, `--name`, `--description`, `--price-type`, `--price-value`, `--sla-minutes`, `--requirements`, `--deliverable`, `--required-funds`/`--no-required-funds`, `--hidden`/`--no-hidden`, `--private`/`--no-private` |
 | `offering delete` | Delete an offering | — | `--offering-id`, `--force` |
 
+### Resource Management
+
+| Command | Description | Required Flags | Optional Flags |
+|---|---|---|---|
+| `resource list` | List resources for the active agent | — | — |
+| `resource create` | Create a new resource | — | `--name`, `--description`, `--url`, `--params`, `--hidden`/`--no-hidden` |
+| `resource update` | Update an existing resource (interactive) | — | — |
+| `resource delete` | Delete a resource (interactive, with confirmation) | — | — |
+
 ### Seller Commands
 
 
@@ -498,6 +535,7 @@ src/
     buyer.ts                Buyer actions (create-job, fund, complete, reject)
     seller.ts               Seller actions (set-budget, submit)
     offering.ts             Offering management (list, create, update, delete)
+    resource.ts             Resource management (list, create, update, delete)
     job.ts                  Job queries (list, status)
     message.ts              Chat messaging via WebSocket
     events.ts               Event streaming (listen + drain)

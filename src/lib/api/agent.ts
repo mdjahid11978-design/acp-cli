@@ -52,9 +52,33 @@ interface DeleteOfferingResponse {
 
 export interface AgentResource {
   id: string;
+  agentId: string;
   name: string;
   description: string;
   url: string;
+  params: Record<string, unknown>;
+  isHidden: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateResourceBody {
+  name: string;
+  description: string;
+  url: string;
+  params: Record<string, unknown>;
+  hidden?: boolean;
+}
+
+export type UpdateResourceBody = Partial<CreateResourceBody>;
+
+interface ResourceResponse {
+  message: string;
+  data: AgentResource;
+}
+
+interface DeleteResourceResponse {
+  message: string;
 }
 
 export interface Agent {
@@ -290,6 +314,38 @@ export class AgentApi {
   ): Promise<DeleteOfferingResponse> {
     return this.client.delete<DeleteOfferingResponse>(
       `/agents/${agentId}/offerings/${offeringId}`
+    );
+  }
+
+  async createResource(
+    agentId: string,
+    body: CreateResourceBody
+  ): Promise<AgentResource> {
+    const res = await this.client.post<ResourceResponse>(
+      `/agents/${agentId}/resources`,
+      body
+    );
+    return res.data;
+  }
+
+  async updateResource(
+    agentId: string,
+    resourceId: string,
+    body: UpdateResourceBody
+  ): Promise<AgentResource> {
+    const res = await this.client.put<ResourceResponse>(
+      `/agents/${agentId}/resources/${resourceId}`,
+      body
+    );
+    return res.data;
+  }
+
+  async deleteResource(
+    agentId: string,
+    resourceId: string
+  ): Promise<DeleteResourceResponse> {
+    return this.client.delete<DeleteResourceResponse>(
+      `/agents/${agentId}/resources/${resourceId}`
     );
   }
 

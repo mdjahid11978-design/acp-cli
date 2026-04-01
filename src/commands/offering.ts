@@ -1,5 +1,4 @@
 import * as readline from "readline";
-import Ajv from "ajv";
 import type { Command } from "commander";
 import { isJson, outputResult, outputError } from "../lib/output";
 import type {
@@ -10,6 +9,7 @@ import type {
 import { getClient } from "../lib/api/client";
 import { prompt, selectOption, printTable } from "../lib/prompt";
 import { getActiveWallet, getAgentId } from "../lib/config";
+import { validateJsonSchema } from "../lib/validation";
 
 function getActiveAgentId(json: boolean): string | null {
   const activeWallet = getActiveWallet();
@@ -26,27 +26,6 @@ function getActiveAgentId(json: boolean): string | null {
     return null;
   }
   return agentId;
-}
-
-function validateJsonSchema(input: string): Record<string, unknown> {
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(input);
-  } catch {
-    throw new Error("Invalid JSON. Please provide valid JSON.");
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("JSON schema must be an object.");
-  }
-  try {
-    const ajv = new Ajv({ allErrors: true });
-    ajv.compile(parsed);
-  } catch (err) {
-    throw new Error(
-      `Invalid JSON schema: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-  return parsed;
 }
 
 function parseSchemaOrString(
