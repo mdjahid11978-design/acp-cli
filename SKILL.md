@@ -23,21 +23,16 @@ Both are discoverable via `acp browse`.
 
 ## Setup
 
-The CLI is configured entirely through environment variables in `.env` at the repo root. Copy `.env.example` and fill in your wallet credentials.
+Authentication is handled by `acp configure`, which opens a browser-based OAuth flow and stores tokens in the OS keychain. Agent wallets and signing keys are managed via `acp agent create` and `acp agent add-signer` — no manual key configuration needed.
 
-### Required Environment Variables
+All environment variables are optional. The CLI works out of the box after `acp configure`.
 
-
-| Variable                 | Required         | Default                 | Description                      |
-| ------------------------ | ---------------- | ----------------------- | -------------------------------- |
-| `ACP_WALLET_ADDRESS`     | Always           | —                       | Smart account wallet address     |
-| `ACP_PRIVATE_KEY`        | Alchemy provider | —                       | Private key for Alchemy provider |
-| `ACP_PROVIDER_TYPE`      | No               | `alchemy`               | `alchemy` or `privy`             |
-| `ACP_ENTITY_ID`          | No               | `1`                     | Entity ID for Alchemy provider   |
-| `ACP_WALLET_ID`          | Privy provider   | —                       | Privy wallet ID                  |
-| `ACP_SIGNER_PRIVATE_KEY` | Privy provider   | —                       | Privy signer private key         |
-| `ACP_SOCKET_SERVER_URL`  | No               | `http://localhost:3000` | ACP socket server URL            |
-| `ACP_CONTRACT_ADDRESS`   | No               | Base Sepolia default    | Override ACP contract address    |
+| Variable | Default | Description |
+|---|---|---|
+| `ACP_API_URL` | `https://api-dev.acp.virtuals.io` | Override the ACP API URL |
+| `ACP_CHAIN_ID` | `84532` (Base Sepolia) | Default chain ID for agent token resolution |
+| `ACP_PRIVY_APP_ID` | — | Privy app ID (enables automatic signer setup during agent creation) |
+| `PARTNER_ID` | — | Partner ID for tokenization |
 
 
 ## How to Run
@@ -520,9 +515,9 @@ open ──► budget_set ──► funded ──► submitted ──► complet
 
 On error, commands print `{"error":"message"}` to stderr and exit with code 1. Common errors:
 
-- **Missing env var** — A required environment variable is not set. Check `.env`.
+- **Not authenticated** — Run `acp configure` to authenticate.
 - **No session found for job** — The job ID doesn't exist or your wallet is not a participant.
-- **Socket connection timeout** — Cannot reach the ACP socket server. Check `ACP_SOCKET_SERVER_URL`.
+- **Socket connection timeout** — Cannot reach the ACP socket server.
 
 On transient errors (network timeouts, rate limits), retry the command once.
 
@@ -541,9 +536,9 @@ src/
     events.ts               Event streaming (listen + drain)
     wallet.ts               Wallet info
   lib/
-    agentFactory.ts         Creates AcpAgent from env vars (Alchemy/Privy)
+    agentFactory.ts         Creates AcpAgent from config + OS keychain
     rest.ts                 REST client for job queries
     output.ts               JSON / human-readable output formatting
-.env                        Wallet credentials (do not commit)
+    validation.ts           Shared JSON schema validation (AJV)
 ```
 

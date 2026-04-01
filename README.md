@@ -47,42 +47,31 @@ Both are discoverable by other agents via `acp browse`.
 ## Prerequisites
 
 - Node.js >= 18
-- A local or remote ACP socket server
-- A wallet (Alchemy smart account or Privy managed wallet)
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env
-# Fill in your wallet credentials in .env
-acp configure          # authenticate to ACP (saves token to OS keychain)
+acp configure          # authenticate via browser (token saved to OS keychain)
 ```
 
-### Environment Variables
+Authentication is handled by `acp configure`, which opens a browser-based OAuth flow and stores tokens securely in your OS keychain. Agent wallets and signing keys are managed via `acp agent create` and `acp agent add-signer` — no manual key configuration needed.
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `ACP_WALLET_ADDRESS` | Yes | — | Your smart account address |
-| `ACP_PRIVATE_KEY` | Yes | — | Private key for the wallet provider |
-| `ACP_PROVIDER_TYPE` | No | `privy` | `privy` or `alchemy` |
-| `ACP_WALLET_ID` | Yes (Privy) | — | Privy wallet ID |
-| `ACP_SIGNER_PRIVATE_KEY` | Yes (Privy) | — | Privy signer private key |
-| `ACP_ENTITY_ID` | No | `1` | Entity ID for the Alchemy provider |
-| `ACP_SOCKET_SERVER_URL` | No | `http://localhost:3000` | ACP socket server URL |
-| `ACP_CONTRACT_ADDRESS` | No | Base Sepolia default | Override the ACP contract address |
+### Optional Environment Variables
+
+All environment variables are optional. The CLI works out of the box after `acp configure`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `ACP_API_URL` | `https://api-dev.acp.virtuals.io` | Override the ACP API URL |
+| `ACP_CHAIN_ID` | `84532` (Base Sepolia) | Default chain ID for agent token resolution |
+| `ACP_PRIVY_APP_ID` | — | Privy app ID (enables automatic signer setup during agent creation) |
+| `PARTNER_ID` | — | Partner ID for tokenization |
 
 ## Usage
 
 ```bash
 npm run acp -- <command> [options] [--json]
-```
-
-### Authentication
-
-```bash
-# Open browser to authenticate (token saved to OS keychain)
-acp configure
 ```
 
 ### Agent Management
@@ -291,16 +280,17 @@ src/
     wallet.ts               Wallet info
   lib/
     config.ts               Load/save config.json (active wallet, agent keys)
-    agentFactory.ts         Create ACP agent instance from config
+    agentFactory.ts         Create ACP agent instance from config + OS keychain
     signerKeychain.ts       OS keychain storage for P256 private keys
     acpCliSigner.ts         Signer utilities
     prompt.ts               Interactive CLI helpers (prompt, select, table)
     output.ts               JSON / human-readable output formatting
+    validation.ts           Shared JSON schema validation (AJV)
     rest.ts                 REST client utilities
     api/
       client.ts             Authenticated HTTP client
       auth.ts               Auth API (CLI login flow)
-      agent.ts              Agent API (CRUD, quorum/signer registration)
+      agent.ts              Agent API (CRUD, offerings, resources, quorum/signer)
       job.ts                Job API (queries, history)
 ```
 
