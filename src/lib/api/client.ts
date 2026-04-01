@@ -8,6 +8,7 @@ import {
 import { AuthApi } from "./auth";
 import { AgentApi } from "./agent";
 import { JobApi } from "./job";
+import { ACP_SERVER_URL } from "acp-node-v2";
 
 export class ApiClient {
   constructor(private baseUrl: string, private token?: string) {}
@@ -100,7 +101,7 @@ export async function getClient(walletAddress?: string): Promise<{
   jobApi: JobApi;
   authApi: AuthApi;
 }> {
-  const apiUrl = process.env.ACP_API_URL || "https://acp.virtuals.io";
+  const apiUrl = process.env.ACP_API_URL || ACP_SERVER_URL;
   const token = await resolveToken(walletAddress, apiUrl);
   const httpClient = new ApiClient(apiUrl, token);
   return {

@@ -70,7 +70,6 @@ export async function createAgentFromConfig(): Promise<AcpAgent> {
     walletAddress: walletAddress as `0x${string}`,
     walletId,
     signerPrivateKey,
-    serverUrl: process.env.ACP_API_URL,
   });
 
   return AcpAgent.create({
