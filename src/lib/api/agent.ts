@@ -227,13 +227,18 @@ export class AgentApi {
     symbol: string,
     txHash?: string
   ): Promise<TokenizeResponse> {
+    const payload: Record<string, unknown> = {
+      chainId,
+      symbol,
+      txHash,
+    };
+
+    const partnerId = process.env.PARTNER_ID;
+    if (partnerId) payload.partnerId = partnerId;
+
     const res = await this.client.post<{ data: TokenizeResponse }>(
       `/agents/${agentId}/tokenize`,
-      {
-        chainId,
-        symbol,
-        txHash,
-      }
+      payload
     );
     return res.data;
   }
