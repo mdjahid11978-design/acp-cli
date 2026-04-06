@@ -8,8 +8,44 @@ import {
   unlinkSync,
   existsSync,
 } from "fs";
-import { createAgentFromConfig } from "../lib/agentFactory";
+import {
+  createAgentFromConfig,
+  createV1BuyerAdapter,
+} from "../lib/agentFactory";
 import { isJson, outputResult, outputError } from "../lib/output";
+import { V1BuyerAdapter } from "../lib/compat/v1BuyerAdapter";
+import { AcpJobPhases, AcpJob, AcpMemo } from "@virtuals-protocol/acp-node";
+import { FundIntent } from "acp-node-v2/dist/events/types";
+
+function phaseToEventType(phase: AcpJobPhases): string {
+  switch (phase) {
+    case AcpJobPhases.NEGOTIATION:
+      return "budget.set";
+    case AcpJobPhases.TRANSACTION:
+      return "job.funded";
+    case AcpJobPhases.EVALUATION:
+      return "job.submitted";
+    case AcpJobPhases.COMPLETED:
+      return "job.completed";
+    case AcpJobPhases.REJECTED:
+      return "job.rejected";
+    case AcpJobPhases.EXPIRED:
+      return "job.expired";
+    default:
+      return "job.created";
+  }
+}
+
+function v1AvailableTools(phase: AcpJobPhases): string[] {
+  switch (phase) {
+    case AcpJobPhases.NEGOTIATION:
+      return ["fund"];
+    case AcpJobPhases.EVALUATION:
+      return ["complete", "reject"];
+    default:
+      return [];
+  }
+}
 
 export function registerEventsCommand(program: Command): void {
   const events = program
@@ -32,6 +68,7 @@ export function registerEventsCommand(program: Command): void {
           ? (line: string) => appendFileSync(opts.output, line + "\n")
           : (line: string) => process.stdout.write(line + "\n");
 
+        // V2 event listener (SSE)
         agent.on("entry", async (session: JobSession, entry: JobRoomEntry) => {
           if (opts.jobId && session.jobId !== opts.jobId) return;
 
@@ -39,6 +76,7 @@ export function registerEventsCommand(program: Command): void {
             jobId: session.jobId,
             chainId: session.chainId,
             status: session.status,
+            protocol: "v2",
             roles: session.roles,
             availableTools: session.availableTools().map((t) => t.name),
             entry,
@@ -47,6 +85,116 @@ export function registerEventsCommand(program: Command): void {
         });
 
         await agent.start();
+
+        // V1 Socket.IO listener via old AcpClient's onNewTask — always connect
+        // so we catch v1 events even for jobs created after the listener starts.
+        try {
+          const v1Adapter = await createV1BuyerAdapter(undefined, {
+            onNewTask: async (job: AcpJob, memoToSign?: AcpMemo) => {
+              const jobId = String(job.id);
+              if (opts.jobId && jobId !== opts.jobId) return;
+
+              const status = V1BuyerAdapter.phaseToStatus(job.phase);
+              const eventType = phaseToEventType(job.phase);
+
+              const deliverable = await job.getDeliverable();
+              const budget = job.price;
+
+              let fundRequest: FundIntent | null = null;
+
+              if (
+                memoToSign &&
+                memoToSign.payableDetails &&
+                job.phase === AcpJobPhases.NEGOTIATION
+              ) {
+                const requestToken = await agent.resolveRawAssetToken(
+                  memoToSign.payableDetails.token,
+                  memoToSign.payableDetails.amount,
+                  v1Adapter.chainId
+                );
+
+                fundRequest = {
+                  amount: requestToken.amount,
+                  tokenAddress: requestToken.address,
+                  symbol: requestToken.symbol,
+                  recipient: memoToSign.payableDetails.recipient,
+                };
+              }
+
+              const completedMemo = job.memos.find(
+                (m) => m.nextPhase === AcpJobPhases.COMPLETED
+              );
+              let fundTransfer: FundIntent | null = null;
+
+              if (completedMemo && completedMemo.payableDetails) {
+                const transferToken = await agent.resolveRawAssetToken(
+                  completedMemo.payableDetails.token,
+                  completedMemo.payableDetails.amount,
+                  v1Adapter.chainId
+                );
+
+                fundTransfer = {
+                  amount: transferToken.amount,
+                  tokenAddress: transferToken.address,
+                  symbol: transferToken.symbol,
+                  recipient: completedMemo.payableDetails.recipient,
+                };
+              }
+
+              const line = JSON.stringify({
+                jobId,
+                chainId: v1Adapter.chainId,
+                status,
+                protocol: "v1",
+                roles: ["client"],
+                availableTools: v1AvailableTools(job.phase),
+                entry: {
+                  kind: "system",
+                  onChainJobId: jobId,
+                  chainId: v1Adapter.chainId,
+                  event: {
+                    type: eventType,
+                    jobId,
+                    budget,
+                    ...(fundTransfer ? { fundTransfer } : {}),
+                    ...(fundRequest ? { fundRequest } : {}),
+                    ...(deliverable ? { deliverable } : {}),
+                  },
+                  timestamp: Date.now(),
+                },
+              });
+
+              console.log("v1 event", {
+                kind: "system",
+                onChainJobId: jobId,
+                chainId: v1Adapter.chainId,
+                entry: {
+                  kind: "system",
+                  onChainJobId: jobId,
+                  chainId: v1Adapter.chainId,
+                  event: {
+                    type: eventType,
+                    jobId,
+                    budget,
+                    ...(fundTransfer ? { fundTransfer } : {}),
+                    ...(fundRequest ? { fundRequest } : {}),
+                    ...(deliverable ? { deliverable } : {}),
+                  },
+                  timestamp: Date.now(),
+                },
+              });
+              write(line);
+            },
+          });
+        } catch (err) {
+          process.stderr.write(
+            JSON.stringify({
+              warning: `V1 listener failed: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+            }) + "\n"
+          );
+        }
 
         const shutdown = async () => {
           await agent.stop();

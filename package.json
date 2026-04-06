@@ -14,6 +14,10 @@
   "description": "CLI tool wrapping the ACP Node SDK for agent tool use",
   "dependencies": {
     "@privy-io/node": "^0.11.0",
+<<<<<<< Updated upstream
+=======
+    "@virtuals-protocol/acp-node": "^0.3.0-beta.40",
+>>>>>>> Stashed changes
     "acp-node-v2": "file:../acp-node-v2",
     "ajv": "^8.18.0",
     "commander": "^13.0.0",

@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { isJson, outputError } from "../lib/output";
 import { getClient } from "../lib/api/client";
 import type { BrowseAgent } from "../lib/api/agent";
+import { detectProtocolVersion } from "../lib/compat/versionDetector";
 
 type Offering = BrowseAgent["offerings"][number];
 type Resource = BrowseAgent["resources"][number];
@@ -41,11 +42,22 @@ export function registerBrowseCommand(program: Command): void {
     .command("browse [query]")
     .description("Browse available agents")
     .option("--chain-ids <ids>", "Comma-separated chain IDs to filter by")
-    .option("--sort-by <fields>", "Comma-separated sort fields: successfulJobCount, successRate, uniqueBuyerCount, minsFromLastOnlineTime")
+    .option(
+      "--sort-by <fields>",
+      "Comma-separated sort fields: successfulJobCount, successRate, uniqueBuyerCount, minsFromLastOnlineTime"
+    )
     .option("--top-k <n>", "Max number of results", parseInt)
-    .option("--online <status>", "Filter by online status: all, online, offline")
+    .option(
+      "--online <status>",
+      "Filter by online status: all, online, offline"
+    )
     .option("--cluster <name>", "Filter by cluster")
     .action(async (query, opts, cmd) => {
+      if (!query) {
+        console.log("Please provide a query to browse agents.");
+        return;
+      }
+
       const { agentApi } = await getClient();
       const json = isJson(cmd);
 
@@ -68,7 +80,11 @@ export function registerBrowseCommand(program: Command): void {
         const { data } = result;
 
         if (json) {
-          process.stdout.write(JSON.stringify(result) + "\n");
+          const enriched = data.map((a) => ({
+            ...a,
+            protocolVersion: detectProtocolVersion(a),
+          }));
+          process.stdout.write(JSON.stringify({ data: enriched }) + "\n");
           return;
         }
 
@@ -78,7 +94,8 @@ export function registerBrowseCommand(program: Command): void {
         }
 
         for (const a of data) {
-          console.log(`  Name:           ${a.name}`);
+          const version = detectProtocolVersion(a);
+          console.log(`  Name:           ${a.name} [${version}]`);
           console.log(`  Description:    ${a.description}`);
           console.log(`  Wallet:         ${a.walletAddress}`);
           if (a.chains.length > 0) {

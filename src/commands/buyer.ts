@@ -1,8 +1,12 @@
 import type { Command } from "commander";
 import type { AcpAgentOffering } from "acp-node-v2";
 import { AssetToken } from "acp-node-v2";
-import { createAgentFromConfig } from "../lib/agentFactory";
+import {
+  createAgentFromConfig,
+  createV1BuyerAdapter,
+} from "../lib/agentFactory";
 import { isJson, outputResult, outputError } from "../lib/output";
+import { registerJob, getJobRegistryEntry } from "../lib/config";
 
 export function registerBuyerCommands(program: Command): void {
   const buyer = program
@@ -21,10 +25,41 @@ export function registerBuyerCommands(program: Command): void {
     .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .option("--expired-in <seconds>", "Seconds until expiry", "3600")
     .option("--hook <address>", "Hook address")
-    .option("--fund-transfer", "Use fund transfer hook (defaults to chain hook address)")
+    .option(
+      "--fund-transfer",
+      "Use fund transfer hook (defaults to chain hook address)"
+    )
+    .option("--protocol <version>", "Protocol version: v1 or v2 (default: v2)")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
+        const chainId = Number(opts.chainId);
+
+        if (opts.protocol === "v1") {
+          // Route to V1 adapter for openclaw-cli sellers
+          const adapter = await createV1BuyerAdapter(chainId);
+          const jobId = await adapter.createJob({
+            providerAddress: opts.provider,
+            requirement: opts.description,
+            amount: 0, // Budget set later by seller in v1 flow
+            evaluatorAddress: opts.evaluator,
+            expiredAt: new Date(Date.now() + Number(opts.expiredIn) * 1000),
+            chainId,
+          });
+
+          registerJob(String(jobId), "v1", chainId);
+
+          outputResult(json, {
+            success: true,
+            action: "create-job",
+            protocol: "v1",
+            jobId: String(jobId),
+            provider: opts.provider,
+          });
+          return;
+        }
+
+        // Default: v2 flow
         const agent = await createAgentFromConfig();
         await agent.start();
         try {
@@ -41,12 +76,15 @@ export function registerBuyerCommands(program: Command): void {
           };
 
           const jobId = opts.fundTransfer
-            ? await agent.createFundTransferJob(Number(opts.chainId), params)
-            : await agent.createJob(Number(opts.chainId), params);
+            ? await agent.createFundTransferJob(chainId, params)
+            : await agent.createJob(chainId, params);
+
+          registerJob(jobId.toString(), "v2", chainId);
 
           outputResult(json, {
             success: true,
             action: "create-job",
+            protocol: "v2",
             jobId: jobId.toString(),
             provider: opts.provider,
             evaluator,
@@ -71,6 +109,26 @@ export function registerBuyerCommands(program: Command): void {
       const json = isJson(cmd);
       try {
         const chainId = Number(opts.chainId);
+        const entry = getJobRegistryEntry(opts.jobId);
+
+        if (entry?.version === "v1") {
+          // Route to V1 adapter
+          const adapter = await createV1BuyerAdapter(entry.chainId);
+          await adapter.fundJob(
+            Number(opts.jobId),
+            `Funded ${opts.amount} USDC`
+          );
+          outputResult(json, {
+            success: true,
+            action: "fund",
+            protocol: "v1",
+            jobId: opts.jobId,
+            amount: opts.amount,
+          });
+          return;
+        }
+
+        // Default: v2 flow
         const agent = await createAgentFromConfig();
         await agent.start();
         try {
@@ -86,6 +144,7 @@ export function registerBuyerCommands(program: Command): void {
           outputResult(json, {
             success: true,
             action: "fund",
+            protocol: "v2",
             jobId: opts.jobId,
             amount: opts.amount,
           });
@@ -106,6 +165,22 @@ export function registerBuyerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
+        const entry = getJobRegistryEntry(opts.jobId);
+
+        if (entry?.version === "v1") {
+          const adapter = await createV1BuyerAdapter(entry.chainId);
+          await adapter.completeJob(Number(opts.jobId), opts.reason);
+          outputResult(json, {
+            success: true,
+            action: "complete",
+            protocol: "v1",
+            jobId: opts.jobId,
+            reason: opts.reason,
+          });
+          return;
+        }
+
+        // Default: v2 flow
         const agent = await createAgentFromConfig();
         await agent.start();
         try {
@@ -117,6 +192,7 @@ export function registerBuyerCommands(program: Command): void {
           outputResult(json, {
             success: true,
             action: "complete",
+            protocol: "v2",
             jobId: opts.jobId,
             reason: opts.reason,
           });
@@ -137,6 +213,22 @@ export function registerBuyerCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
+        const entry = getJobRegistryEntry(opts.jobId);
+
+        if (entry?.version === "v1") {
+          const adapter = await createV1BuyerAdapter(entry.chainId);
+          await adapter.rejectJob(Number(opts.jobId), opts.reason);
+          outputResult(json, {
+            success: true,
+            action: "reject",
+            protocol: "v1",
+            jobId: opts.jobId,
+            reason: opts.reason,
+          });
+          return;
+        }
+
+        // Default: v2 flow
         const agent = await createAgentFromConfig();
         await agent.start();
         try {
@@ -148,6 +240,7 @@ export function registerBuyerCommands(program: Command): void {
           outputResult(json, {
             success: true,
             action: "reject",
+            protocol: "v2",
             jobId: opts.jobId,
             reason: opts.reason,
           });
@@ -165,10 +258,20 @@ export function registerBuyerCommands(program: Command): void {
       "Create a job from a provider's offering (validates requirements, auto-calculates expiry)"
     )
     .requiredOption("--provider <address>", "Provider (seller) wallet address")
-    .requiredOption("--offering <json>", "Offering JSON object (from browse output)")
-    .requiredOption("--requirements <json>", "Requirements JSON matching the offering schema")
+    .requiredOption(
+      "--offering <json>",
+      "Offering JSON object (from browse output)"
+    )
+    .requiredOption(
+      "--requirements <json>",
+      "Requirements JSON matching the offering schema"
+    )
     .requiredOption("--chain-id <id>", "Chain ID", "8453")
-    .option("--evaluator <address>", "Evaluator wallet address (defaults to your own)")
+    .option(
+      "--evaluator <address>",
+      "Evaluator wallet address (defaults to your own)"
+    )
+    .option("--protocol <version>", "Protocol version: v1 or v2 (default: v2)")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
@@ -186,21 +289,56 @@ export function registerBuyerCommands(program: Command): void {
           requirements = opts.requirements;
         }
 
+        const chainId = Number(opts.chainId);
+
+        if (opts.protocol === "v1") {
+          // Route to V1 adapter for openclaw-cli sellers
+          const adapter = await createV1BuyerAdapter(chainId);
+          const jobId = await adapter.createJob({
+            providerAddress: opts.provider,
+            requirement: requirements,
+            amount:
+              offering.priceType === "fixed" ? Number(offering.priceValue) : 0,
+            evaluatorAddress: opts.evaluator,
+            expiredAt: new Date(
+              Date.now() + (offering.slaMinutes || 60) * 60 * 1000
+            ),
+            offeringName: offering.name,
+            chainId,
+          });
+
+          registerJob(String(jobId), "v1", chainId);
+
+          outputResult(json, {
+            success: true,
+            action: "create-job-from-offering",
+            protocol: "v1",
+            jobId: String(jobId),
+            provider: opts.provider,
+            offering: offering.name,
+          });
+          return;
+        }
+
+        // Default: v2 flow
         const agent = await createAgentFromConfig();
         await agent.start();
         try {
           const evaluator = opts.evaluator ?? (await agent.getAddress());
           const jobId = await agent.createJobFromOffering(
-            Number(opts.chainId),
+            chainId,
             offering,
             opts.provider,
             requirements,
             { evaluatorAddress: evaluator }
           );
 
+          registerJob(jobId.toString(), "v2", chainId);
+
           outputResult(json, {
             success: true,
             action: "create-job-from-offering",
+            protocol: "v2",
             jobId: jobId.toString(),
             provider: opts.provider,
             offering: offering.name,

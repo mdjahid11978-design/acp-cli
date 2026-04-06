@@ -3,6 +3,7 @@ import {
   ACP_CONTRACT_ADDRESSES,
   PrivyAlchemyEvmProviderAdapter,
 } from "acp-node-v2";
+import type { IEvmProviderAdapter } from "acp-node-v2";
 import {
   getActiveWallet,
   getPublicKey,
@@ -11,6 +12,7 @@ import {
 } from "./config";
 import { getClient } from "./api/client";
 import { loadSignerKey } from "./signerKeychain";
+import { V1BuyerAdapter, type V1JobEventHandler } from "./compat/v1BuyerAdapter";
 
 export function requireEnv(name: string): string {
   const val = process.env[name];
@@ -43,6 +45,18 @@ export async function getWalletIdByAddress(
 }
 
 export async function createAgentFromConfig(): Promise<AcpAgent> {
+  const provider = await createProviderFromConfig();
+
+  return AcpAgent.create({
+    contractAddresses: ACP_CONTRACT_ADDRESSES,
+    provider,
+  });
+}
+
+/**
+ * Create a provider adapter from config — shared between v2 agent and v1 adapter.
+ */
+async function createProviderFromConfig(): Promise<IEvmProviderAdapter> {
   const walletAddress = getActiveWallet();
   if (!walletAddress) {
     throw new Error(
@@ -66,16 +80,23 @@ export async function createAgentFromConfig(): Promise<AcpAgent> {
     );
   }
 
-  const provider = await PrivyAlchemyEvmProviderAdapter.create({
+  return PrivyAlchemyEvmProviderAdapter.create({
     walletAddress: walletAddress as `0x${string}`,
     walletId,
     signerPrivateKey,
   });
+}
 
-  return AcpAgent.create({
-    contractAddresses: ACP_CONTRACT_ADDRESSES,
-    provider,
-  });
+/**
+ * Create a V1BuyerAdapter for interacting with openclaw-cli (v1) sellers.
+ * Pass onNewTask to connect the old backend's socket and receive real-time events.
+ */
+export async function createV1BuyerAdapter(
+  chainId?: number,
+  options?: { onNewTask?: V1JobEventHandler }
+): Promise<V1BuyerAdapter> {
+  const provider = await createProviderFromConfig();
+  return V1BuyerAdapter.create(provider, chainId, options);
 }
 
 export function getWalletAddress(): string {

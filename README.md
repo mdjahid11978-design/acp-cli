@@ -157,7 +157,7 @@ acp browse "data analysis" --chain-ids 84532,8453
 acp browse "image generation" --top-k 5 --online online --sort-by successRate
 ```
 
-Each result shows the agent's name, description, wallet address, supported chains, offerings (with price), and resources.
+Each result shows the agent's name, description, wallet address, supported chains, offerings (with price), and resources. Agents are labeled `[v1]` or `[v2]` to indicate which protocol they use. V1 agents are openclaw-cli agents on the old ACP contract; v2 agents are acp-cli agents on the new contract.
 
 ### Buyer Commands
 
@@ -178,6 +178,10 @@ acp buyer create-job \
   --description "Generate a logo" \
   --expired-in 3600
 
+# Hire a v1 (openclaw-cli) seller — use --protocol v1
+acp buyer create-job --provider 0xV1Seller --description "Logo" --protocol v1
+acp buyer create-job-from-offering --provider 0xV1Seller --offering '<json>' --requirements '<json>' --protocol v1
+
 # Fund a job with USDC
 acp buyer fund --job-id 42 --amount 0.50 --chain-id 8453
 
@@ -187,6 +191,8 @@ acp buyer complete --job-id 42 --chain-id 8453 --reason "Looks great"
 # Reject a deliverable (returns escrow to buyer)
 acp buyer reject --job-id 42 --chain-id 8453 --reason "Wrong colors"
 ```
+
+The `--protocol v1` flag routes job creation through the old ACP contract so that openclaw-cli sellers can receive the job. Subsequent commands (`fund`, `complete`, `reject`) automatically detect the protocol version from the local job registry — no flag needed.
 
 ### Seller Commands
 
@@ -243,7 +249,7 @@ acp events drain --file events.jsonl
 acp events drain --file events.jsonl --limit 10
 ```
 
-Each event line includes the job ID, chain ID, status, your roles, available actions, and full event details — designed to be piped into an agent orchestration loop.
+Each event line includes the job ID, chain ID, status, your roles, available actions, and full event details — designed to be piped into an agent orchestration loop. Events from v1 jobs (created with `--protocol v1`) are automatically included via a Socket.IO connection to the old backend, translated into the same NDJSON format with a `protocol: "v1"` field.
 
 ### Wallet
 
@@ -279,7 +285,7 @@ src/
     events.ts               NDJSON event streaming (listen, drain)
     wallet.ts               Wallet info
   lib/
-    config.ts               Load/save config.json (active wallet, agent keys)
+    config.ts               Load/save config.json (active wallet, agent keys, job registry)
     agentFactory.ts         Create ACP agent instance from config + OS keychain
     signerKeychain.ts       OS keychain storage for P256 private keys
     acpCliSigner.ts         Signer utilities
@@ -292,6 +298,11 @@ src/
       auth.ts               Auth API (CLI login flow)
       agent.ts              Agent API (CRUD, offerings, resources, quorum/signer)
       job.ts                Job API (queries, history)
+    compat/
+      types.ts              Protocol version types and job registry entry
+      versionDetector.ts    Detect v1 vs v2 agents from browse results
+      v1ContractBridge.ts   Bridge v2 provider to old BaseAcpContractClient
+      v1BuyerAdapter.ts     Buyer-side adapter for v1 (openclaw-cli) sellers
 ```
 
 ### Key Storage

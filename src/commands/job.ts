@@ -1,8 +1,10 @@
 import type { Command } from "commander";
 import { isJson, outputResult, outputError } from "../lib/output";
-import { getWalletAddress } from "../lib/agentFactory";
+import { getWalletAddress, createV1BuyerAdapter } from "../lib/agentFactory";
 import { getClient } from "../lib/api/client";
 import { formatUnits } from "viem";
+import { getJobRegistryEntry, getV1Jobs } from "../lib/config";
+import { V1BuyerAdapter } from "../lib/compat/v1BuyerAdapter";
 
 export function registerJobCommands(program: Command): void {
   const job = program.command("job").description("Job queries (history, list)");
@@ -16,26 +18,65 @@ export function registerJobCommands(program: Command): void {
         const wallet = getWalletAddress();
 
         const { jobApi } = await getClient(wallet);
-        const jobs = await jobApi.getActiveJobs();
+        const v2Jobs = await jobApi.getActiveJobs();
+
+        // Tag v2 jobs
+        const taggedV2 = v2Jobs.map((j: any) => ({ ...j, protocol: "v2" }));
+
+        // Also fetch v1 jobs if any exist in registry
+        let taggedV1: any[] = [];
+        const v1Registry = getV1Jobs();
+        if (Object.keys(v1Registry).length > 0) {
+          try {
+            const adapter = await createV1BuyerAdapter();
+            const v1Jobs = await adapter.getActiveJobs();
+            taggedV1 = v1Jobs.map((j) => ({
+              onChainJobId: String(j.id),
+              chainId: j.config.chain.id,
+              clientAddress: j.clientAddress,
+              providerAddress: j.providerAddress,
+              evaluatorAddress: j.evaluatorAddress,
+              budget: String(j.price),
+              jobStatus: V1BuyerAdapter.phaseToStatus(j.phase),
+              expiredAt: "",
+              protocol: "v1",
+            }));
+          } catch {
+            // V1 fetch failed — continue with v2 only
+          }
+        }
+
+        const allJobs = [...taggedV2, ...taggedV1];
 
         if (json) {
-          outputResult(true, { jobs });
+          outputResult(true, { jobs: allJobs });
         } else {
-          if (jobs.length === 0) {
+          if (allJobs.length === 0) {
             console.log("No active jobs.");
           } else {
-            console.log(`Active jobs (${jobs.length}):\n`);
-            for (const j of jobs) {
-              console.log(`  Job ID:           ${j.onChainJobId}`);
+            console.log(`Active jobs (${allJobs.length}):\n`);
+            for (const j of allJobs) {
+              console.log(
+                `  Job ID:           ${j.onChainJobId} [${j.protocol}]`
+              );
               console.log(`  Chain ID:         ${j.chainId}`);
               console.log(`  Client:           ${j.clientAddress}`);
               console.log(`  Provider:         ${j.providerAddress}`);
               console.log(`  Evaluator:        ${j.evaluatorAddress}`);
-              console.log(
-                `  Budget:           ${formatUnits(BigInt(j.budget), 6)} USDC`
-              );
+              if (j.protocol === "v2") {
+                console.log(
+                  `  Budget:           ${formatUnits(
+                    BigInt(j.budget),
+                    6
+                  )} USDC`
+                );
+              } else {
+                console.log(`  Budget:           ${j.budget} USDC`);
+              }
               console.log(`  Status:           ${j.jobStatus}`);
-              console.log(`  Expires At:       ${j.expiredAt}`);
+              if (j.expiredAt) {
+                console.log(`  Expires At:       ${j.expiredAt}`);
+              }
               console.log();
             }
           }
@@ -55,6 +96,46 @@ export function registerJobCommands(program: Command): void {
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
+        const entry = getJobRegistryEntry(opts.jobId);
+
+        if (entry?.version === "v1") {
+          // V1 job history — fetch from old backend
+          const adapter = await createV1BuyerAdapter(entry.chainId);
+          const v1Job = await adapter.getJob(Number(opts.jobId));
+          if (!v1Job) {
+            throw new Error(`V1 job ${opts.jobId} not found`);
+          }
+
+          const status = V1BuyerAdapter.phaseToStatus(v1Job.phase);
+          const memoEntries = v1Job.memos.map((m: any) => ({
+            kind: "message" as const,
+            from: m.senderAddress,
+            content: m.content,
+            contentType: "text",
+            timestamp: Date.now(),
+          }));
+
+          if (json) {
+            outputResult(true, {
+              jobId: opts.jobId,
+              chainId: entry.chainId,
+              protocol: "v1",
+              status,
+              entryCount: memoEntries.length,
+              entries: memoEntries,
+            });
+          } else {
+            console.log(`Job ${opts.jobId} (chain ${entry.chainId}) [v1]`);
+            console.log(`Status: ${status}`);
+            console.log(`Memos: ${memoEntries.length}\n`);
+            for (const e of memoEntries) {
+              console.log(`  [${e.from}] ${e.content}`);
+            }
+          }
+          return;
+        }
+
+        // Default: v2 flow
         const wallet = getWalletAddress();
 
         const { jobApi } = await getClient(wallet);
@@ -69,12 +150,13 @@ export function registerJobCommands(program: Command): void {
           outputResult(true, {
             jobId: opts.jobId,
             chainId: Number(opts.chainId),
+            protocol: "v2",
             status,
             entryCount: entries.length,
             entries,
           });
         } else {
-          console.log(`Job ${opts.jobId} (chain ${opts.chainId})`);
+          console.log(`Job ${opts.jobId} (chain ${opts.chainId}) [v2]`);
           console.log(`Status: ${status}`);
           console.log(`Entries: ${entries.length}\n`);
           for (const e of entries) {
