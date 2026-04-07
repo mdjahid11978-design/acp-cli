@@ -162,7 +162,6 @@ export class LegacyBuyerAdapter {
     });
   }
 
-
   /**
    * Map a v1 job phase to v2-style status string.
    */
@@ -195,7 +194,9 @@ export class LegacyBuyerAdapter {
 function resolveLegacyConfig(chainId?: number): AcpContractConfig {
   if (chainId === 8453) {
     return baseAcpConfigV2;
+  } else if (chainId === 84532) {
+    return baseSepoliaAcpConfigV2;
   }
-  // Default: Base Sepolia testnet
-  return baseSepoliaAcpConfigV2;
+
+  throw new Error(`Unsupported chain ID: ${chainId}`);
 }
