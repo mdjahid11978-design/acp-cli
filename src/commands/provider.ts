@@ -4,12 +4,13 @@ import { createAgentFromConfig } from "../lib/agentFactory";
 import { isJson, outputResult, outputError, maskAddress } from "../lib/output";
 import { CliError } from "../lib/errors";
 import { c } from "../lib/color";
-export function registerSellerCommands(program: Command): void {
-  const seller = program
-    .command("seller")
-    .description("Seller-side commands (set budget, submit deliverable)");
 
-  seller
+export function registerProviderCommands(program: Command): void {
+  const provider = program
+    .command("provider")
+    .description("Provider-side commands (set budget, submit deliverable)");
+
+  provider
     .command("set-budget")
     .description("Propose a budget for a job (USDC)")
     .requiredOption("--job-id <id>", "On-chain job ID")
@@ -48,13 +49,19 @@ export function registerSellerCommands(program: Command): void {
       }
     });
 
-  seller
+  provider
     .command("set-budget-with-fund-request")
-    .description("Propose a budget with a fund transfer request (USDC)")
+    .description(
+      "Propose a budget and request a fund transfer. The budget (--amount) is " +
+        "your service fee (USDC). The fund transfer (--transfer-amount) is " +
+        "capital the client provides for job execution (e.g., tokens for trades, " +
+        "gas for on-chain ops). These are separate: the budget pays you, the " +
+        "fund transfer gives you working capital."
+    )
     .requiredOption("--job-id <id>", "On-chain job ID")
-    .requiredOption("--amount <usdc>", "USDC budget amount to propose")
-    .requiredOption("--transfer-amount <usdc>", "USDC amount to request transfer")
-    .requiredOption("--destination <address>", "Recipient address for the transfer")
+    .requiredOption("--amount <usdc>", "USDC service fee")
+    .requiredOption("--transfer-amount <usdc>", "Amount of capital to request from client")
+    .requiredOption("--destination <address>", "Recipient address for the working capital")
     .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
@@ -97,7 +104,7 @@ export function registerSellerCommands(program: Command): void {
       }
     });
 
-  seller
+  provider
     .command("submit")
     .description("Submit a deliverable for a job")
     .requiredOption("--job-id <id>", "On-chain job ID")
