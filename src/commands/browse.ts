@@ -32,6 +32,8 @@ function printOffering(o: Offering): void {
   console.log(`      Requirements:  ${formatOneLiner(o.requirements)}`);
   console.log(`      Deliverable:   ${formatOneLiner(o.deliverable)}`);
   console.log(`      Price:         ${formatPrice(o.priceType, o.priceValue)}`);
+  console.log(`      SLA:           ${o.slaMinutes} min`);
+  console.log(`      Required Funds: ${o.requiredFunds ? "Yes" : "No"}`);
 }
 
 function printResource(r: Resource): void {
@@ -52,7 +54,9 @@ function printLegacyAgent(a: {
     console.log(`  Offerings:`);
     for (const o of a.jobOfferings) {
       console.log(`    - ${o.name}`);
-      if (o.price != null) console.log(`      Price:         ${o.price} USDC`);
+      if (o.price != null) console.log(`      Price:         ${formatPrice(o.priceType ?? "FIXED", o.price)}`);
+      if (o.slaMinutes != null) console.log(`      SLA:           ${o.slaMinutes} min`);
+      if (o.requiredFunds != null) console.log(`      Required Funds: ${o.requiredFunds ? "Yes" : "No"}`);
     }
   } else {
     console.log(`  Offerings:      No offerings`);
@@ -101,9 +105,9 @@ export function registerBrowseCommand(program: Command): void {
               description: a.description ?? "",
               offerings: a.jobOfferings.map((o) => ({
                 name: o.name,
-                price: o.price,
+                priceValue: o.price,
                 priceType: o.priceType,
-                requirement: o.requirement,
+                requirements: o.requirement,
                 deliverable: o.deliverable,
                 slaMinutes: o.slaMinutes,
                 requiredFunds: o.requiredFunds,
