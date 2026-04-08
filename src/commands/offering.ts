@@ -228,11 +228,17 @@ export function registerOfferingCommands(program: Command): void {
           }
           priceType = pt;
         } else {
+          rl?.close();
+          rl = undefined;
           priceType = await selectOption(
             "Price type:",
             ["fixed", "percentage"] as const,
             (t) => t
           );
+          rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          });
         }
 
         // Price value
