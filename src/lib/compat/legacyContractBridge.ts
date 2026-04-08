@@ -171,6 +171,10 @@ export class LegacyContractBridge extends BaseAcpContractClient {
     return "2";
   }
 
+  async getX402PaymentDetails(_jobId: number): Promise<{ isX402: boolean; isBudgetReceived: boolean }> {
+    return { isX402: false, isBudgetReceived: false };
+  }
+
   async updateJobX402Nonce(): Promise<any> {
     throw new Error("X402 not supported via LegacyContractBridge");
   }

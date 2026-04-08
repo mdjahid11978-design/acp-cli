@@ -8,7 +8,6 @@ const CONFIG_PATH = resolve(process.cwd(), "config.json");
 
 interface AgentConfig {
   publicKey: string;
-  token?: string;
   walletId?: string;
   id?: string;
 }
