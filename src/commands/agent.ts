@@ -32,8 +32,8 @@ import {
   setAgentId,
   getAgentId,
 } from "../lib/config";
-import { generateP256KeyPair, P256KeyPair } from "@privy-io/node";
-import { storeSignerKey } from "../lib/signerKeychain";
+import { generateKeyPair as generateNativeKeyPair } from "../lib/acpCliSigner";
+import { openBrowser } from "../lib/browser";
 import { createAgentFromConfig } from "../lib/agentFactory";
 import { EvmAcpClient, SUPPORTED_CHAINS } from "acp-node-v2";
 
@@ -96,10 +96,11 @@ async function runAddSignerFlow(
   json: boolean,
   agent: Agent
 ): Promise<boolean> {
-  // 1. Generate key pair and persist private key to keychain
-  let keypair: P256KeyPair;
+  // 1. Generate key pair in native keystore (private key never leaves the binary)
+  let publicKey: string;
   try {
-    keypair = await generateP256KeyPair();
+    const result = generateNativeKeyPair();
+    publicKey = result.publicKey;
   } catch (err) {
     outputError(
       json,
@@ -115,7 +116,7 @@ async function runAddSignerFlow(
   let requestId: string;
   try {
     const res = await api.addSignerWithUrl(agent.id);
-    signerUrl = `${res.data.url}&publicKey=${keypair.publicKey}`;
+    signerUrl = `${res.data.url}&publicKey=${publicKey}`;
     requestId = res.data.requestId;
   } catch (err) {
     outputError(
@@ -131,16 +132,17 @@ async function runAddSignerFlow(
   if (json) {
     outputResult(json, {
       signerUrl,
-      publicKey: keypair.publicKey,
+      publicKey,
       expiresIn: "5 minutes",
     });
   } else {
-    console.log(`\nPublic Key: ${keypair.publicKey}`);
+    console.log(`\nPublic Key: ${publicKey}`);
     console.log(
-      `\nPlease visit the following URL to verify the public key and approve the signer:`
+      `\nOpening browser to verify the public key and approve the signer...`
     );
     console.log(`\n  ${signerUrl}\n`);
     console.log(`This link expires in 5 minutes.\n`);
+    openBrowser(signerUrl);
     console.log(`Waiting for approval...`);
   }
 
@@ -175,11 +177,10 @@ async function runAddSignerFlow(
     }
   }
 
-  // 4. Persist public key to config and keychain (only after all API calls succeed)
+  // 4. Persist public key reference to config (private key already stored by native binary)
   const walletId = agent.walletProviders[0].metadata.walletId;
-  setPublicKey(agent.walletAddress, keypair.publicKey);
+  setPublicKey(agent.walletAddress, publicKey);
   setWalletId(agent.walletAddress, walletId);
-  await storeSignerKey(keypair.publicKey, keypair.privateKey);
 
   if (json) {
     outputResult(json, {

@@ -1,23 +1,13 @@
-import { exec } from "child_process";
 import type { Command } from "commander";
 import { isJson, outputResult, outputError } from "../lib/output";
 import { CliError } from "../lib/errors";
 import { AuthApi } from "../lib/api/auth";
 import { getClient } from "../lib/api/client";
 import { setTokens } from "../lib/config";
+import { openBrowser } from "../lib/browser";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
-
-function openBrowser(url: string): void {
-  const cmd =
-    process.platform === "win32"
-      ? `start "" "${url}"`
-      : process.platform === "darwin"
-      ? `open "${url}"`
-      : `xdg-open "${url}"`;
-  exec(cmd);
-}
 
 async function waitForToken(
   authApi: AuthApi,

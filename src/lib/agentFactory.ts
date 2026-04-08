@@ -19,7 +19,7 @@ import {
   setWalletId,
 } from "./config";
 import { getClient } from "./api/client";
-import { loadSignerKey } from "./signerKeychain";
+import { createSignFn } from "./acpCliSigner";
 import {
   LegacyBuyerAdapter,
   type LegacyJobEventHandler,
@@ -102,19 +102,12 @@ async function createProviderFromConfig(
     getWalletId(walletAddress) ?? (await getWalletIdByAddress(walletAddress));
   setWalletId(walletAddress, walletId);
 
-  const signerPrivateKey = await loadSignerKey(publicKey);
-  if (!signerPrivateKey) {
-    throw new CliError(
-      "Signer key not found in keychain.",
-      "NO_SIGNER",
-      "Run `acp agent add-signer` to regenerate the signing key."
-    );
-  }
+  const signFn = createSignFn(publicKey);
 
   return PrivyAlchemyEvmProviderAdapter.create({
     walletAddress: walletAddress as `0x${string}`,
     walletId,
-    signerPrivateKey,
+    signFn,
     chains,
     serverUrl,
     privyAppId,

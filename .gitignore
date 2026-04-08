@@ -3,7 +3,5 @@ dist/
 .env
 *.js.map
 config.json
-bin/acp-cli-signer
-bin/acp-cli-signer-*
 acp-cli-signer/acp-cli-signer
 .DS_Store

@@ -7,69 +7,78 @@ const BINARY = join(__dirname, "../../bin/acp-cli-signer");
 
 interface GenerateResult {
   publicKey: string;
+  backend: string;
 }
 
 interface SignResult {
   signature: string;
 }
 
+interface ListResult {
+  keys: string[];
+}
+
+interface InfoResult {
+  backend: string;
+  platform: string;
+}
+
 interface ErrorResult {
   error: string;
 }
 
-function runBinary(args: string[], stdin?: string): unknown {
-  const output = execFileSync(BINARY, args, { encoding: "utf8", input: stdin });
+function runBinary(args: string[]): unknown {
+  const output = execFileSync(BINARY, args, { encoding: "utf8" });
   return JSON.parse(output.trim());
 }
 
 /**
- * Generates a P256 key pair. The private key is stored securely in the OS
- * keychain. Returns only the base64-encoded uncompressed public key.
+ * Generates a P256 key pair inside the platform keystore.
+ * The private key is stored securely and never returned.
+ * Returns the base64-encoded public key.
  */
-export function generateKeyPair(): string {
+export function generateKeyPair(): { publicKey: string; backend: string } {
   const res = runBinary(["generate"]) as GenerateResult | ErrorResult;
-  if ("error" in res) throw new Error(`acp-cli-signer:${res.error}`);
-  return res.publicKey;
+  if ("error" in res) throw new Error(`acp-cli-signer: ${res.error}`);
+  return { publicKey: res.publicKey, backend: res.backend };
 }
 
 /**
- * Signs `payload` using the P256 private key stored in the OS keychain for
- * the given base64 public key. Returns a base64-encoded 64-byte R||S
- * signature (IEEE P1363 / WebCrypto compatible).
+ * Creates a signFn callback that delegates signing to the native binary.
+ * The callback takes a Uint8Array payload and returns a base64 DER signature.
+ * The private key never enters the Node.js process.
  */
-export function signPayload(publicKeyB64: string, payload: string): string {
-  const res = runBinary([
-    "sign",
-    "--public-key",
-    publicKeyB64,
-    "--payload",
-    payload,
-  ]) as SignResult | ErrorResult;
-  if ("error" in res) throw new Error(`acp-cli-signer:${res.error}`);
-  return res.signature;
+export function createSignFn(
+  publicKeyB64: string
+): (payload: Uint8Array) => Promise<string> {
+  return async (payload: Uint8Array): Promise<string> => {
+    const hex = Buffer.from(payload).toString("hex");
+    const res = runBinary([
+      "sign",
+      "--public-key",
+      publicKeyB64,
+      "--payload",
+      hex,
+    ]) as SignResult | ErrorResult;
+    if ("error" in res) throw new Error(`acp-cli-signer: ${res.error}`);
+    return res.signature;
+  };
 }
 
 /**
- * Builds, canonicalizes, and signs a Privy authorization payload in the Go
- * binary, following https://docs.privy.io exactly (RFC 8785 + ECDSA P-256).
- * The private key is looked up in the OS keychain via its base64 public key —
- * Node.js never handles the key material.
+ * Lists all public keys stored in the platform keystore.
  */
-export function signPrivyAuthorization(
-  method: string,
-  url: string,
-  body: unknown,
-  appId: string,
-  publicKeyB64: string,
-): string {
-  const res = runBinary([
-    "sign-privy-auth",
-    "--method", method,
-    "--url", url,
-    "--body", JSON.stringify(body),
-    "--app-id", appId,
-    "--public-key", publicKeyB64,
-  ]) as SignResult | ErrorResult;
-  if ("error" in res) throw new Error(`acp-cli-signer:${res.error}`);
-  return res.signature;
+export function listKeys(): string[] {
+  const res = runBinary(["list"]) as ListResult | ErrorResult;
+  if ("error" in res) throw new Error(`acp-cli-signer: ${res.error}`);
+  return res.keys;
+}
+
+/**
+ * Returns info about the active keystore backend.
+ */
+export function signerInfo(): { backend: string; platform: string } {
+  const res = runBinary(["info"]) as InfoResult | ErrorResult;
+  if ("error" in res) throw new Error(`acp-cli-signer: ${res.error}`);
+  return { backend: res.backend, platform: res.platform };
 }
