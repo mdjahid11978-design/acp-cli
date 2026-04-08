@@ -42,7 +42,8 @@ export function registerClientCommands(program: Command): void {
           const jobId = await adapter.createJob({
             providerAddress: opts.provider,
             requirement: opts.description,
-            amount: 0,
+            priceType: "fixed",
+            priceValue: 0,
             evaluatorAddress: opts.evaluator,
             expiredAt: new Date(Date.now() + Number(opts.expiredIn) * 1000),
             chainId,
@@ -328,8 +329,8 @@ export function registerClientCommands(program: Command): void {
           const jobId = await adapter.createJob({
             providerAddress: opts.provider,
             requirement: requirements,
-            amount:
-              legacyOffering.priceType === "fixed" ? Number(legacyOffering.price) : 0,
+            priceType: legacyOffering.priceType as "fixed" | "percentage",
+            priceValue: Number(legacyOffering.price),
             evaluatorAddress: opts.evaluator,
             expiredAt: new Date(
               Date.now() + (legacyOffering.slaMinutes || 60) * 60 * 1000

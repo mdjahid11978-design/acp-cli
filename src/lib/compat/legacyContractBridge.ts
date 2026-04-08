@@ -101,7 +101,6 @@ export class LegacyContractBridge extends BaseAcpContractClient {
     clientAddress: Address,
     providerAddress: Address
   ): Promise<number> {
-    console.log("createJobTxHash", createJobTxHash);
     // Retry receipt fetch — bundled user-ops may take a moment to propagate
     let receipt = null;
     for (let attempt = 0; attempt < 10; attempt++) {
@@ -149,10 +148,7 @@ export class LegacyContractBridge extends BaseAcpContractClient {
   }
 
   async signTypedData(typedData: SignTypedDataParameters): Promise<Hex> {
-    return (await this.provider.signTypedData(
-      this.chainId,
-      typedData
-    )) as Hex;
+    return (await this.provider.signTypedData(this.chainId, typedData)) as Hex;
   }
 
   async signMessage(message: string): Promise<Hex> {
@@ -171,7 +167,9 @@ export class LegacyContractBridge extends BaseAcpContractClient {
     return "2";
   }
 
-  async getX402PaymentDetails(_jobId: number): Promise<{ isX402: boolean; isBudgetReceived: boolean }> {
+  async getX402PaymentDetails(
+    _jobId: number
+  ): Promise<{ isX402: boolean; isBudgetReceived: boolean }> {
     return { isX402: false, isBudgetReceived: false };
   }
 

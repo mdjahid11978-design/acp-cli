@@ -8,6 +8,7 @@ import {
   maskAddress,
 } from "../lib/output";
 import { c } from "../lib/color";
+import type { AcpAgent } from "acp-node-v2";
 import {
   getWalletAddress,
   createAgentFromConfig,
@@ -17,7 +18,7 @@ import { getClient } from "../lib/api/client";
 import { formatUnits } from "viem";
 import { isLegacyJob, getLegacyJobChainId } from "../lib/config";
 import { LegacyBuyerAdapter } from "../lib/compat/legacyBuyerAdapter";
-import { AcpJobPhases, AcpJob } from "@virtuals-protocol/acp-node";
+import { AcpJobPhases, AcpJob, AcpMemo } from "@virtuals-protocol/acp-node";
 
 export function registerJobCommands(program: Command): void {
   const job = program.command("job").description("Job queries and monitoring");
@@ -140,14 +141,53 @@ export function registerJobCommands(program: Command): void {
             throw new Error(`Legacy job ${opts.jobId} not found`);
           }
 
+          const agent = await createAgentFromConfig();
           const status = LegacyBuyerAdapter.phaseToStatus(legacyJob.phase);
-          const memoEntries = legacyJob.memos.map((m: any) => ({
-            kind: "message" as const,
-            from: m.senderAddress,
-            content: m.content,
-            contentType: "text",
-            timestamp: Date.now(),
-          }));
+          const deliverable = legacyJob.getDeliverable();
+          const budget = legacyJob.price;
+
+          const fundRequestMemo = legacyJob.memos.find(
+            (m: AcpMemo) =>
+              m.payableDetails && m.nextPhase === AcpJobPhases.NEGOTIATION
+          );
+          const fundRequest = fundRequestMemo
+            ? await extractLegacyPayableInfo(
+                fundRequestMemo,
+                legacyChainId,
+                agent
+              )
+            : null;
+
+          const completedMemo = legacyJob.memos.find(
+            (m: AcpMemo) =>
+              m.payableDetails && m.nextPhase === AcpJobPhases.COMPLETED
+          );
+          const fundTransfer = completedMemo
+            ? await extractLegacyPayableInfo(
+                completedMemo,
+                legacyChainId,
+                agent
+              )
+            : null;
+
+          const memoEntries = await Promise.all(
+            legacyJob.memos.map(async (m: AcpMemo) => ({
+              kind: "message" as const,
+              from: m.senderAddress,
+              content: m.content,
+              contentType: "text",
+              timestamp: Date.now(),
+              ...(m.payableDetails
+                ? {
+                    payableDetails: await extractLegacyPayableInfo(
+                      m,
+                      legacyChainId,
+                      agent
+                    ),
+                  }
+                : {}),
+            }))
+          );
 
           if (json) {
             outputResult(true, {
@@ -155,12 +195,33 @@ export function registerJobCommands(program: Command): void {
               chainId: legacyChainId,
               legacy: true,
               status,
+              budget,
+              ...(fundRequest ? { fundRequest } : {}),
+              ...(fundTransfer ? { fundTransfer } : {}),
+              ...(deliverable ? { deliverable } : {}),
               entryCount: memoEntries.length,
               entries: memoEntries,
             });
           } else if (isTTY()) {
             console.log(`Job ${opts.jobId} (chain ${legacyChainId}) [legacy]`);
             console.log(`Status: ${status}`);
+            console.log(`Budget: ${budget}`);
+            if (fundRequest)
+              console.log(
+                `Fund Request: ${fundRequest.amount} ${fundRequest.symbol}`
+              );
+            if (fundTransfer)
+              console.log(
+                `Fund Transfer: ${fundTransfer.amount} ${fundTransfer.symbol}`
+              );
+            if (deliverable)
+              console.log(
+                `Deliverable: ${
+                  typeof deliverable === "string"
+                    ? deliverable
+                    : JSON.stringify(deliverable)
+                }`
+              );
             console.log(`Memos: ${memoEntries.length}\n`);
             for (const e of memoEntries) {
               console.log(`  [${e.from}] ${e.content}`);
@@ -283,21 +344,50 @@ export function registerJobCommands(program: Command): void {
         if (isLegacyJob(jobId)) {
           // Legacy: watch via old SDK's onNewTask socket
           const legacyChainId = getLegacyJobChainId(jobId);
+          const agent = await createAgentFromConfig();
           await createLegacyBuyerAdapter({
-            onNewTask: (job: AcpJob) => {
+            onNewTask: async (job: AcpJob, memoToSign?: AcpMemo) => {
               if (String(job.id) !== jobId) return;
 
               const status = LegacyBuyerAdapter.phaseToStatus(job.phase);
               const tools = legacyAvailableTools(job.phase);
               const actionable = tools.filter((t) => t !== "wait");
 
+              const deliverable = job.getDeliverable();
+              const budget = job.price;
+              const chainId = legacyChainId ?? 84532;
+
+              let fundRequest = null;
+              if (
+                memoToSign?.payableDetails &&
+                job.phase === AcpJobPhases.NEGOTIATION
+              ) {
+                fundRequest = await extractLegacyPayableInfo(
+                  memoToSign,
+                  chainId,
+                  agent
+                );
+              }
+
+              const completedMemo = job.memos.find(
+                (m: AcpMemo) =>
+                  m.payableDetails && m.nextPhase === AcpJobPhases.COMPLETED
+              );
+              const fundTransfer = completedMemo
+                ? await extractLegacyPayableInfo(completedMemo, chainId, agent)
+                : null;
+
               const eventData: Record<string, unknown> = {
                 jobId,
-                chainId: legacyChainId,
+                chainId,
                 status,
                 legacy: true,
                 roles: ["client"],
                 availableTools: tools,
+                budget,
+                ...(fundRequest ? { fundRequest } : {}),
+                ...(fundTransfer ? { fundTransfer } : {}),
+                ...(deliverable ? { deliverable } : {}),
               };
 
               if (status === "completed") return done(1, eventData);
@@ -355,6 +445,21 @@ export function registerJobCommands(program: Command): void {
         process.exit(4);
       }
     });
+}
+
+async function extractLegacyPayableInfo(
+  memo: AcpMemo,
+  chainId: number,
+  agent: AcpAgent
+) {
+  const pd = memo.payableDetails!;
+  const token = await agent.resolveRawAssetToken(pd.token, pd.amount, chainId);
+  return {
+    amount: token.amount,
+    tokenAddress: token.address,
+    symbol: token.symbol,
+    recipient: pd.recipient,
+  };
 }
 
 function legacyAvailableTools(phase: AcpJobPhases): string[] {

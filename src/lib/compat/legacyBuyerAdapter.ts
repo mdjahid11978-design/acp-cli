@@ -65,20 +65,23 @@ export class LegacyBuyerAdapter {
   async createJob(params: {
     providerAddress: string;
     requirement: string | Record<string, unknown>;
-    amount: number;
+    priceType: "fixed" | "percentage";
+    priceValue: number;
     evaluatorAddress?: string;
     expiredAt?: Date;
     offeringName?: string;
     chainId: number;
   }): Promise<number> {
     const config = resolveLegacyConfig(params.chainId);
-    const fareAmount = new FareAmount(params.amount, config.baseFare);
+    const fareAmount = new FareAmount(params.priceValue, config.baseFare);
 
     // V1 sellers expect the first memo content to be JSON with shape:
     //   { name: "<offering name>", requirement: { ... } }
     // See openclaw-acp/src/seller/runtime/seller.ts resolveOfferingName/resolveServiceRequirements
     const serviceRequirement: Record<string, unknown> = {
       name: params.offeringName ?? "",
+      priceType: params.priceType,
+      priceValue: params.priceValue,
       requirement:
         typeof params.requirement === "string"
           ? params.requirement
