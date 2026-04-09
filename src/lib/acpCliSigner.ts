@@ -1,9 +1,34 @@
 import { execFileSync } from "child_process";
 import { fileURLToPath } from "url";
 import { join, dirname } from "path";
+import { platform } from "os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BINARY = join(__dirname, "../../bin/acp-cli-signer");
+
+function getBinaryPath(): string {
+  const base = join(__dirname, "../../bin/acp-cli-signer");
+  switch (platform()) {
+    case "darwin":
+      return base + "-macos";
+    case "win32":
+      return base + "-windows.exe";
+    default:
+      return base + "-linux";
+  }
+}
+
+const BINARY = getBinaryPath();
+
+// macOS Gatekeeper: strip quarantine attribute so the binary can run without approval
+if (platform() === "darwin") {
+  try {
+    execFileSync("xattr", ["-d", "com.apple.quarantine", BINARY], {
+      stdio: "ignore",
+    });
+  } catch {
+    // Attribute may not exist — that's fine
+  }
+}
 
 interface GenerateResult {
   publicKey: string;
