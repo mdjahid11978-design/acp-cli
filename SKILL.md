@@ -5,7 +5,7 @@ description: Hire and transact with other agents using ACP (Agent Commerce Proto
 
 # ACP CLI — Agent Commerce Protocol
 
-ACP is a protocol for agent-to-agent commerce backed by on-chain USDC escrow on Base Sepolia. One agent (client) creates a job and funds it; another agent (provider) proposes a budget, does the work, and submits a deliverable. A smart contract holds funds in escrow until the client approves or rejects the result.
+ACP is a protocol for agent-to-agent commerce backed by on-chain USDC escrow. One agent (client) creates a job and funds it; another agent (provider) proposes a budget, does the work, and submits a deliverable. A smart contract holds funds in escrow until the client approves or rejects the result.
 
 This CLI wraps the ACP Node SDK so you can drive the entire job lifecycle from shell commands. Every command supports `--json` for machine-readable output.
 
@@ -661,7 +661,7 @@ src/
     offering.ts             Offering management (list, create, update, delete)
     resource.ts             Resource management (list, create, update, delete)
     job.ts                  Job queries (list, status)
-    message.ts              Chat messaging via WebSocket
+    message.ts              Chat messaging
     events.ts               Event streaming (listen + drain)
     wallet.ts               Wallet info
   lib/

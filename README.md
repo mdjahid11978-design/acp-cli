@@ -275,7 +275,7 @@ src/
     client.ts                Client actions (create-job, fund, complete, reject)
     provider.ts               Provider actions (set-budget, submit)
     job.ts                  Job queries (list, history)
-    message.ts              Chat messaging via WebSocket
+    message.ts              Chat messaging
     events.ts               NDJSON event streaming (listen, drain)
     wallet.ts               Wallet info
   lib/
