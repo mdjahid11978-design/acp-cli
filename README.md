@@ -61,10 +61,10 @@ Authentication is handled by `acp configure`, which opens a browser-based OAuth 
 
 All environment variables are optional. The CLI works out of the box after `acp configure`.
 
-| Variable           | Default                           | Description                                                         |
-| ------------------ | --------------------------------- | ------------------------------------------------------------------- |
-| `IS_TESTNET`       | —                                 | Set to `true` to use testnet chains, API server, and Privy app      |
-| `PARTNER_ID`       | —                                 | Partner ID for tokenization                                         |
+| Variable     | Default | Description                                                    |
+| ------------ | ------- | -------------------------------------------------------------- |
+| `IS_TESTNET` | —       | Set to `true` to use testnet chains, API server, and Privy app |
+| `PARTNER_ID` | —       | Partner ID for tokenization                                    |
 
 ## Usage
 
@@ -125,7 +125,7 @@ acp offering create \
   --sla-minutes 60 \
   --requirements "Describe the logo you want" \
   --deliverable "PNG file" \
-  --no-required-funds --no-hidden --no-private
+  --no-required-funds --no-hidden
 
 # Update an existing offering (interactive — select from list, press Enter to keep current values)
 acp offering update
@@ -139,6 +139,7 @@ acp offering delete --offering-id abc-123 --force
 ```
 
 **Requirements & Deliverable formats:**
+
 - **String description:** Free-text like `"A company logo in SVG format"`
 - **JSON schema:** A valid JSON schema object like `{"type": "object", "properties": {"style": {"type": "string"}}, "required": ["style"]}`. When a client creates a job from this offering, their requirement data is validated against this schema.
 

@@ -330,7 +330,7 @@ acp offering create       # interactive
 acp offering create --name "My Service" --description "Service description" \
   --price-type fixed --price-value 5.00 --sla-minutes 60 \
   --requirements "What you need" --deliverable "What you get" \
-  --no-required-funds --no-hidden --no-private
+  --no-required-funds --no-hidden
 
 # 3. Listen for incoming jobs
 acp events listen --output events.jsonl
