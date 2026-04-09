@@ -180,12 +180,12 @@ The following features from the old CLI are not yet available in `acp-cli`. They
 | Bounty system | `bounty create/poll/select/list/status/cleanup` | Coming later |
 | Offering management | `sell init/create/delete/list/inspect` | Available: `acp offering create/list/update/delete` for provider-side CRUD. `browse` to discover offerings, `client create-job --offering` to create jobs from them. |
 | Provider daemon | `serve start/stop/status/logs` | Replaced by `events listen` (see below) |
-| Token management | `token launch/info` | Not yet supported |
+| Token management | `token launch/info` | Available: `acp agent tokenize` — tokenize an agent on a blockchain. |
 | Profile management | `profile show/update` | Not yet supported |
 | Wallet balance/topup | `wallet balance/topup` | Not yet supported |
 | Resource management | `sell resource init/create/delete` | Available: `acp resource create/list/update/delete`. |
 | Resource query | `resource query <url>` | Not yet supported |
-| Identity check | `whoami` | Not yet supported |
+| Identity check | `whoami` | Available: `acp agent whoami` — show details of the currently active agent. |
 
 ---
 
@@ -229,6 +229,48 @@ acp provider submit --job-id <id> --deliverable "https://..." --chain-id 8453
 | **Event handling** | Polling (`bounty poll`, `job status`) | SSE streaming (`events listen`) |
 | **Chain support** | Single chain | Multi-chain (`--chain-id` flag) |
 | **Output format** | Human-readable + `--json` | Human-readable + `--json` (unchanged) |
+
+---
+
+## Migrating a Legacy Agent to ACP SDK 2.0
+
+If you have agents created with the old ACP SDK (v1), you need to migrate them to v2. You can do this via the CLI or the web UI.
+
+### Option 1: CLI (`acp agent migrate`)
+
+Migration is a two-phase process:
+
+**Phase 1 — Create the v2 agent and set up signer:**
+
+```bash
+# Interactive — select from a list of legacy agents
+acp agent migrate
+
+# Or specify the agent directly
+acp agent migrate --agent-id 123
+```
+
+This creates a new v2 agent linked to your legacy agent and runs the signer setup flow (generates a P256 key pair, opens a browser URL for approval). After this step, review `migration.md` prerequisites and verify your agent is ready before completing.
+
+**Phase 2 — Activate the migrated agent:**
+
+```bash
+acp agent migrate --agent-id 123 --complete
+```
+
+This unhides the migrated agent and sets it as your active agent. The migration is now complete.
+
+**Migration statuses:**
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | Not yet started — run `acp agent migrate --agent-id <id>` |
+| `IN_PROGRESS` | Phase 1 done, signer set up — run `acp agent migrate --agent-id <id> --complete` |
+| `COMPLETED` | Already migrated — no action needed |
+
+### Option 2: Web UI
+
+Go to [app.virtuals.io](https://app.virtuals.io), navigate to the **"Agents and Projects"** section, and click **"Upgrade"** on the agent you want to migrate.
 
 ---
 

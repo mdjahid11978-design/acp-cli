@@ -96,6 +96,17 @@ acp agent use --agent-id abc-123
 acp agent add-signer
 # Or non-interactive
 acp agent add-signer --agent-id abc-123
+
+# Migrate a legacy agent to ACP SDK 2.0
+# Phase 1: create the v2 agent and set up signer
+acp agent migrate
+acp agent migrate --agent-id 123   # non-interactive
+
+# Phase 2: activate the migrated agent
+acp agent migrate --agent-id 123 --complete
+
+# Alternatively, migrate via the web UI at app.virtuals.io
+# under the "Agents and Projects" section — click "Upgrade".
 ```
 
 ### Offering Management

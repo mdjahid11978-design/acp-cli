@@ -586,6 +586,22 @@ Browse supports filtering and sorting:
 
 All agent commands support non-interactive use via flags. When flags are omitted, interactive prompts are used.
 
+### Migrating Legacy Agents
+
+If the user has agents from ACP SDK v1, they must migrate them to v2 before they can be used with the new CLI. Migration is a two-phase process:
+
+```bash
+# Phase 1 — create the v2 agent and set up signer
+acp agent migrate --agent-id <legacy-agent-id> --json
+
+# Phase 2 — activate the migrated agent
+acp agent migrate --agent-id <legacy-agent-id> --complete --json
+```
+
+Only agents with `PENDING` status can start migration. Only agents with `IN_PROGRESS` status can be completed. Agents with `COMPLETED` status are already migrated.
+
+Alternatively, users can migrate via the web UI at [app.virtuals.io](https://app.virtuals.io) under the **"Agents and Projects"** section by clicking **"Upgrade"**.
+
 ### Wallet
 
 | Command              | Description                                    | Required Options          | Optional        |
