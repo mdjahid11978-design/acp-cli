@@ -7,7 +7,10 @@ import {
 import { CliError } from "../errors";
 import { AuthApi } from "./auth";
 import { AgentApi } from "./agent";
-import { ACP_SERVER_URL, ACP_TESTNET_SERVER_URL } from "acp-node-v2";
+import {
+  ACP_SERVER_URL,
+  ACP_TESTNET_SERVER_URL,
+} from "@virtuals-protocol/acp-node-v2";
 
 export class ApiClient {
   constructor(private baseUrl: string, private token?: string) {}

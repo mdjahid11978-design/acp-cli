@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { AssetToken } from "acp-node-v2";
+import { AssetToken } from "@virtuals-protocol/acp-node-v2";
 import { createAgentFromConfig } from "../lib/agentFactory";
 import { isJson, outputResult, outputError, maskAddress } from "../lib/output";
 import { CliError } from "../lib/errors";
@@ -30,7 +30,9 @@ export function registerProviderCommands(program: Command): void {
               "Run `acp job list` to see your active jobs."
             );
           }
-          await session.setBudget(AssetToken.usdc(Number(opts.amount), Number(opts.chainId)));
+          await session.setBudget(
+            AssetToken.usdc(Number(opts.amount), Number(opts.chainId))
+          );
           if (json) {
             outputResult(json, {
               success: true,
@@ -39,7 +41,11 @@ export function registerProviderCommands(program: Command): void {
               amount: opts.amount,
             });
           } else {
-            console.log(`\n${c.green(`Budget of ${opts.amount} USDC proposed for Job #${opts.jobId}`)}`);
+            console.log(
+              `\n${c.green(
+                `Budget of ${opts.amount} USDC proposed for Job #${opts.jobId}`
+              )}`
+            );
           }
         } finally {
           await agent.stop();
@@ -60,9 +66,18 @@ export function registerProviderCommands(program: Command): void {
     )
     .requiredOption("--job-id <id>", "On-chain job ID")
     .requiredOption("--amount <usdc>", "USDC service fee")
-    .requiredOption("--transfer-amount <amount>", "Amount of token to request from client")
-    .requiredOption("--destination <address>", "Recipient address for the working capital")
-    .option("--transfer-token <address>", "ERC-20 token contract address for the fund transfer (defaults to USDC)")
+    .requiredOption(
+      "--transfer-amount <amount>",
+      "Amount of token to request from client"
+    )
+    .requiredOption(
+      "--destination <address>",
+      "Recipient address for the working capital"
+    )
+    .option(
+      "--transfer-token <address>",
+      "ERC-20 token contract address for the fund transfer (defaults to USDC)"
+    )
     .requiredOption("--chain-id <id>", "Chain ID", "8453")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
@@ -80,7 +95,11 @@ export function registerProviderCommands(program: Command): void {
             );
           }
           const transferToken = opts.transferToken
-            ? await agent.resolveAssetToken(opts.transferToken as `0x${string}`, Number(opts.transferAmount), chainId)
+            ? await agent.resolveAssetToken(
+                opts.transferToken as `0x${string}`,
+                Number(opts.transferAmount),
+                chainId
+              )
             : AssetToken.usdc(Number(opts.transferAmount), chainId);
           await session.setBudgetWithFundRequest(
             AssetToken.usdc(Number(opts.amount), chainId),
@@ -99,8 +118,16 @@ export function registerProviderCommands(program: Command): void {
               destination: opts.destination,
             });
           } else {
-            console.log(`\n${c.green(`Budget of ${opts.amount} USDC proposed for Job #${opts.jobId}`)}`);
-            console.log(`  Fund transfer: ${opts.transferAmount} ${transferToken.symbol} → ${maskAddress(opts.destination)}`);
+            console.log(
+              `\n${c.green(
+                `Budget of ${opts.amount} USDC proposed for Job #${opts.jobId}`
+              )}`
+            );
+            console.log(
+              `  Fund transfer: ${opts.transferAmount} ${
+                transferToken.symbol
+              } → ${maskAddress(opts.destination)}`
+            );
           }
         } finally {
           await agent.stop();
@@ -116,8 +143,14 @@ export function registerProviderCommands(program: Command): void {
     .requiredOption("--job-id <id>", "On-chain job ID")
     .requiredOption("--deliverable <text>", "Deliverable content or reference")
     .requiredOption("--chain-id <id>", "Chain ID", "8453")
-    .option("--transfer-amount <amount>", "Amount of token to transfer on submit")
-    .option("--transfer-token <address>", "ERC-20 token contract address for the transfer (defaults to USDC)")
+    .option(
+      "--transfer-amount <amount>",
+      "Amount of token to transfer on submit"
+    )
+    .option(
+      "--transfer-token <address>",
+      "ERC-20 token contract address for the transfer (defaults to USDC)"
+    )
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
@@ -142,7 +175,11 @@ export function registerProviderCommands(program: Command): void {
           }
           const transferToken = opts.transferAmount
             ? opts.transferToken
-              ? await agent.resolveAssetToken(opts.transferToken as `0x${string}`, Number(opts.transferAmount), chainId)
+              ? await agent.resolveAssetToken(
+                  opts.transferToken as `0x${string}`,
+                  Number(opts.transferAmount),
+                  chainId
+                )
               : AssetToken.usdc(Number(opts.transferAmount), chainId)
             : undefined;
           await session.submit(opts.deliverable, transferToken);
@@ -159,7 +196,9 @@ export function registerProviderCommands(program: Command): void {
               }),
             });
           } else {
-            console.log(`\n${c.green(`Deliverable submitted for Job #${opts.jobId}`)}`);
+            console.log(
+              `\n${c.green(`Deliverable submitted for Job #${opts.jobId}`)}`
+            );
           }
         } finally {
           await agent.stop();

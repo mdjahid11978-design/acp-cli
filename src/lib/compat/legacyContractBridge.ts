@@ -2,7 +2,7 @@ import {
   BaseAcpContractClient,
   AcpContractConfig,
 } from "@virtuals-protocol/acp-node";
-import type { IEvmProviderAdapter } from "acp-node-v2";
+import type { IEvmProviderAdapter } from "@virtuals-protocol/acp-node-v2";
 import type {
   Address,
   Hex,

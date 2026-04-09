@@ -1,4 +1,4 @@
-import type { JobRoomEntry } from "acp-node-v2";
+import type { JobRoomEntry } from "@virtuals-protocol/acp-node-v2";
 
 export async function getActiveJobs(
   serverUrl: string,
@@ -6,7 +6,9 @@ export async function getActiveJobs(
 ): Promise<{ chainId: number; onChainJobId: string }[]> {
   const res = await fetch(`${serverUrl}/jobs?wallet=${wallet}`);
   if (!res.ok) {
-    throw new Error(`Failed to fetch active jobs: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `Failed to fetch active jobs: ${res.status} ${res.statusText}`
+    );
   }
   const data = (await res.json()) as {
     jobs: { chainId: number; onChainJobId: string }[];
@@ -24,7 +26,9 @@ export async function getJobHistory(
     `${serverUrl}/jobs/${chainId}/${jobId}/history?wallet=${wallet}`
   );
   if (!res.ok) {
-    throw new Error(`Failed to fetch job history: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `Failed to fetch job history: ${res.status} ${res.statusText}`
+    );
   }
   const data = (await res.json()) as { entries: JobRoomEntry[] };
   return data.entries ?? [];

@@ -1,4 +1,4 @@
-import type { JobRoomEntry } from "acp-node-v2";
+import type { JobRoomEntry } from "@virtuals-protocol/acp-node-v2";
 import { ApiClient } from "./client";
 
 interface ActiveJob {

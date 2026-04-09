@@ -35,7 +35,7 @@ import {
 import { generateKeyPair as generateNativeKeyPair } from "../lib/acpCliSigner";
 import { openBrowser } from "../lib/browser";
 import { createAgentFromConfig } from "../lib/agentFactory";
-import { EvmAcpClient, SUPPORTED_CHAINS } from "acp-node-v2";
+import { EvmAcpClient, SUPPORTED_CHAINS } from "@virtuals-protocol/acp-node-v2";
 
 function parseLegacyId(raw: string, json: boolean): number | null {
   const id = parseInt(raw, 10);
@@ -283,7 +283,9 @@ export function registerAgentCommands(program: Command): void {
         return;
       }
 
-      console.log(`\n${c.green(`${created.name} has been created successfully!`)}\n`);
+      console.log(
+        `\n${c.green(`${created.name} has been created successfully!`)}\n`
+      );
 
       printTable([
         ["Name", created.name],
@@ -351,11 +353,15 @@ export function registerAgentCommands(program: Command): void {
             console.log(`  ${c.bold("ID:")}             ${a.id}`);
             console.log(`  ${c.bold("Description:")}    ${a.description}`);
             console.log(`  ${c.bold("Role:")}           ${a.role}`);
-            console.log(`  ${c.bold("Wallet:")}         ${c.dim(a.walletAddress)}`);
+            console.log(
+              `  ${c.bold("Wallet:")}         ${c.dim(a.walletAddress)}`
+            );
             console.log(`  ${c.bold("Created:")}        ${c.dim(a.createdAt)}`);
           }
           console.log(
-            `\n${c.dim(`Page ${meta.pagination.page} of ${meta.pagination.pageCount} (${meta.pagination.total} total)`)}`
+            `\n${c.dim(
+              `Page ${meta.pagination.page} of ${meta.pagination.pageCount} (${meta.pagination.total} total)`
+            )}`
           );
         } else {
           console.log("ID\tNAME\tROLE\tWALLET");

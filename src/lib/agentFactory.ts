@@ -10,8 +10,8 @@ import {
   TESTNET_PRIVY_APP_ID,
   SseTransport,
   AcpApiClient,
-} from "acp-node-v2";
-import type { IEvmProviderAdapter } from "acp-node-v2";
+} from "@virtuals-protocol/acp-node-v2";
+import type { IEvmProviderAdapter } from "@virtuals-protocol/acp-node-v2";
 import {
   getActiveWallet,
   getPublicKey,

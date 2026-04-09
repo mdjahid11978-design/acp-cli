@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import type { JobSession, JobRoomEntry } from "acp-node-v2";
+import type { JobSession, JobRoomEntry } from "@virtuals-protocol/acp-node-v2";
 import {
   isJson,
   outputResult,
@@ -8,7 +8,7 @@ import {
   maskAddress,
 } from "../lib/output";
 import { c } from "../lib/color";
-import type { AcpAgent } from "acp-node-v2";
+import type { AcpAgent } from "@virtuals-protocol/acp-node-v2";
 import {
   getWalletAddress,
   createAgentFromConfig,

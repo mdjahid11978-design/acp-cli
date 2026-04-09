@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import type { AcpAgentDetail } from "acp-node-v2";
+import type { AcpAgentDetail } from "@virtuals-protocol/acp-node-v2";
 import { isJson, outputError, isTTY } from "../lib/output";
 import {
   createAgentFromConfig,
@@ -44,11 +44,14 @@ function printResource(r: Resource): void {
   console.log(`      URL:           ${r.url}`);
 }
 
-function printLegacyAgent(a: {
-  name: string;
-  walletAddress: string;
-  jobOfferings: readonly any[];
-}, chainId: number): void {
+function printLegacyAgent(
+  a: {
+    name: string;
+    walletAddress: string;
+    jobOfferings: readonly any[];
+  },
+  chainId: number
+): void {
   console.log(`  Name:           ${a.name} [legacy]`);
   console.log(`  Wallet:         ${a.walletAddress}`);
   console.log(`  Chain:          ${chainId}`);
@@ -56,9 +59,14 @@ function printLegacyAgent(a: {
     console.log(`  Offerings:`);
     for (const o of a.jobOfferings) {
       console.log(`    - ${o.name}`);
-      if (o.price != null) console.log(`      Price:         ${formatPrice(o.priceType ?? "FIXED", o.price)}`);
-      if (o.slaMinutes != null) console.log(`      SLA:           ${o.slaMinutes} min`);
-      if (o.requiredFunds != null) console.log(`      Required Funds: ${o.requiredFunds ? "Yes" : "No"}`);
+      if (o.price != null)
+        console.log(
+          `      Price:         ${formatPrice(o.priceType ?? "FIXED", o.price)}`
+        );
+      if (o.slaMinutes != null)
+        console.log(`      SLA:           ${o.slaMinutes} min`);
+      if (o.requiredFunds != null)
+        console.log(`      Required Funds: ${o.requiredFunds ? "Yes" : "No"}`);
     }
   } else {
     console.log(`  Offerings:      No offerings`);
@@ -170,10 +178,14 @@ export function registerBrowseCommand(program: Command): void {
           for (const a of data) {
             console.log(`  ${c.bold("Name:")}           ${c.cyan(a.name)}`);
             console.log(`  ${c.bold("Description:")}    ${a.description}`);
-            console.log(`  ${c.bold("Wallet:")}         ${c.dim(a.walletAddress)}`);
+            console.log(
+              `  ${c.bold("Wallet:")}         ${c.dim(a.walletAddress)}`
+            );
             if (a.chains.length > 0) {
               console.log(
-                `  ${c.bold("Chains:")}         ${a.chains.map((ch) => ch.chainId).join(", ")}`
+                `  ${c.bold("Chains:")}         ${a.chains
+                  .map((ch) => ch.chainId)
+                  .join(", ")}`
               );
             }
             if (a.offerings.length > 0) {
@@ -182,7 +194,9 @@ export function registerBrowseCommand(program: Command): void {
                 printOffering(o);
               }
             } else {
-              console.log(`  ${c.bold("Offerings:")}      ${c.dim("No offerings")}`);
+              console.log(
+                `  ${c.bold("Offerings:")}      ${c.dim("No offerings")}`
+              );
             }
             if (a.resources.length > 0) {
               console.log(`  ${c.bold("Resources:")}`);
@@ -190,7 +204,9 @@ export function registerBrowseCommand(program: Command): void {
                 printResource(r);
               }
             } else {
-              console.log(`  ${c.bold("Resources:")}      ${c.dim("No resources")}`);
+              console.log(
+                `  ${c.bold("Resources:")}      ${c.dim("No resources")}`
+              );
             }
             console.log("");
           }

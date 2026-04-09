@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import type { JobSession, JobRoomEntry } from "acp-node-v2";
+import type { JobSession, JobRoomEntry } from "@virtuals-protocol/acp-node-v2";
 import {
   appendFileSync,
   renameSync,
@@ -22,7 +22,7 @@ import {
 } from "../lib/output";
 import { LegacyBuyerAdapter } from "../lib/compat/legacyBuyerAdapter";
 import { AcpJobPhases, AcpJob, AcpMemo } from "@virtuals-protocol/acp-node";
-import { FundIntent } from "acp-node-v2/dist/events/types";
+import { FundIntent } from "@virtuals-protocol/acp-node-v2";
 import { CliError } from "../lib/errors";
 import { c } from "../lib/color";
 

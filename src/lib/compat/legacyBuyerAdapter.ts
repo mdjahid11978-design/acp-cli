@@ -12,7 +12,7 @@ import AcpClientDefault, {
 
 // Handle CJS/ESM interop — default import may be double-wrapped
 const AcpClient = (AcpClientDefault as any).default ?? AcpClientDefault;
-import type { IEvmProviderAdapter } from "acp-node-v2";
+import type { IEvmProviderAdapter } from "@virtuals-protocol/acp-node-v2";
 import type { Address } from "viem";
 import { LegacyContractBridge } from "./legacyContractBridge";
 

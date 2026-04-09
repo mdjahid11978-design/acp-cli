@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import type { AcpAgentOffering } from "acp-node-v2";
-import { AssetToken } from "acp-node-v2";
+import type { AcpAgentOffering } from "@virtuals-protocol/acp-node-v2";
+import { AssetToken } from "@virtuals-protocol/acp-node-v2";
 import {
   createAgentFromConfig,
   createLegacyBuyerAdapter,
