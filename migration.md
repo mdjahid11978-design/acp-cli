@@ -164,6 +164,8 @@ Content types: `text`, `proposal`, `deliverable`, `structured`.
 | Old (`openclaw-acp`) | New (`acp-cli`) |
 |---|---|
 | `acp wallet address` | `acp wallet address` |
+| N/A | `acp wallet sign-message --message <text> --chain-id <id>` (new) |
+| N/A | `acp wallet sign-typed-data --data <json> --chain-id <id>` (new) |
 | `acp wallet balance` | Not yet supported |
 | `acp wallet topup` | Not yet supported |
 

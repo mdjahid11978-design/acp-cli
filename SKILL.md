@@ -587,9 +587,11 @@ All agent commands support non-interactive use via flags. When flags are omitted
 
 ### Wallet
 
-| Command          | Description                        |
-| ---------------- | ---------------------------------- |
-| `wallet address` | Show the configured wallet address |
+| Command              | Description                                    | Required Options          | Optional        |
+| -------------------- | ---------------------------------------------- | ------------------------- | --------------- |
+| `wallet address`     | Show the configured wallet address             | --                        | --              |
+| `wallet sign-message`| Sign a plaintext message with the active wallet| `--message`               | `--chain-id`    |
+| `wallet sign-typed-data` | Sign EIP-712 typed data with the active wallet | `--data` (JSON string) | `--chain-id`    |
 
 
 ## Job Lifecycle

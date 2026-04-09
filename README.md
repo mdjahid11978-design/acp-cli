@@ -250,6 +250,12 @@ Each event line includes the job ID, chain ID, status, your roles, available act
 ```bash
 # Show configured wallet address
 acp wallet address
+
+# Sign a plaintext message
+acp wallet sign-message --message "hello world" --chain-id 8453
+
+# Sign EIP-712 typed data
+acp wallet sign-typed-data --data '{"domain":{},"types":{"EIP712Domain":[]},"primaryType":"EIP712Domain","message":{}}' --chain-id 8453
 ```
 
 ## Job Lifecycle
@@ -277,7 +283,7 @@ src/
     job.ts                  Job queries (list, history)
     message.ts              Chat messaging
     events.ts               NDJSON event streaming (listen, drain)
-    wallet.ts               Wallet info
+    wallet.ts               Wallet info and signing
   lib/
     config.ts               Load/save config.json (active wallet, agent keys)
     agentFactory.ts         Create ACP agent instance from config + OS keychain
