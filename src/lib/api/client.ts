@@ -7,7 +7,6 @@ import {
 import { CliError } from "../errors";
 import { AuthApi } from "./auth";
 import { AgentApi } from "./agent";
-import { JobApi } from "./job";
 import { ACP_SERVER_URL, ACP_TESTNET_SERVER_URL } from "acp-node-v2";
 
 export class ApiClient {
@@ -99,7 +98,6 @@ async function resolveToken(apiUrl: string): Promise<string> {
 
 export async function getClient(walletAddress?: string, unauthenticated?: boolean): Promise<{
   agentApi: AgentApi;
-  jobApi: JobApi;
   authApi: AuthApi;
 }> {
   const isTestnet = process.env.IS_TESTNET === "true";
@@ -108,7 +106,6 @@ export async function getClient(walletAddress?: string, unauthenticated?: boolea
   const httpClient = new ApiClient(apiUrl, token);
   return {
     agentApi: new AgentApi(httpClient),
-    jobApi: new JobApi(httpClient, walletAddress ?? ""),
     authApi: new AuthApi(httpClient),
   };
 }

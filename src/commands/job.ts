@@ -29,10 +29,8 @@ export function registerJobCommands(program: Command): void {
     .action(async (_opts, cmd) => {
       const json = isJson(cmd);
       try {
-        const wallet = getWalletAddress();
-
-        const { jobApi } = await getClient(wallet);
-        const v2Jobs = await jobApi.getActiveJobs();
+        const agent = await createAgentFromConfig();
+        const v2Jobs = await agent.getApi().getActiveJobs();
 
         const taggedV2 = v2Jobs.map((j: any) => ({ ...j, legacy: false }));
 
@@ -236,13 +234,10 @@ export function registerJobCommands(program: Command): void {
         }
 
         // Default: v2 flow
-        const wallet = getWalletAddress();
-
-        const { jobApi } = await getClient(wallet);
-        const entries = await jobApi.getChatHistory(
-          Number(opts.chainId),
-          opts.jobId
-        );
+        const agent = await createAgentFromConfig();
+        const entries = await agent
+          .getTransport()
+          .getHistory(Number(opts.chainId), opts.jobId);
 
         const status = deriveStatus(entries);
 
