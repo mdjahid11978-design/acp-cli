@@ -22,7 +22,6 @@ export interface AgentOffering {
   priceValue: string;
   requiredFunds: boolean;
   isHidden: boolean;
-  isPrivate: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,7 +36,6 @@ export interface CreateOfferingBody {
   priceValue: number;
   requiredFunds?: boolean;
   isHidden?: boolean;
-  isPrivate?: boolean;
 }
 
 export type UpdateOfferingBody = Partial<CreateOfferingBody>;
@@ -171,7 +169,6 @@ export interface BrowseAgent {
     priceValue: string;
     requiredFunds: boolean;
     isHidden: boolean;
-    isPrivate: boolean;
     createdAt: string;
     updatedAt: string;
   }[];

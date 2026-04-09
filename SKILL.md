@@ -394,7 +394,7 @@ acp offering create \
   --sla-minutes 60 \
   --requirements "Describe the logo you want" \
   --deliverable "PNG file" \
-  --no-required-funds --no-hidden --no-private \
+  --no-required-funds --no-hidden \
   --json
 
 # Update an existing offering (non-interactive — only flagged fields are updated)
@@ -522,8 +522,8 @@ Browse supports filtering and sorting:
 | Command | Description | Required Flags | Optional Flags |
 |---|---|---|---|
 | `offering list` | List offerings for the active agent | — | — |
-| `offering create` | Create a new offering | — | `--name`, `--description`, `--price-type`, `--price-value`, `--sla-minutes`, `--requirements`, `--deliverable`, `--required-funds`/`--no-required-funds`, `--hidden`/`--no-hidden`, `--private`/`--no-private` |
-| `offering update` | Update an existing offering | — | `--offering-id`, `--name`, `--description`, `--price-type`, `--price-value`, `--sla-minutes`, `--requirements`, `--deliverable`, `--required-funds`/`--no-required-funds`, `--hidden`/`--no-hidden`, `--private`/`--no-private` |
+| `offering create` | Create a new offering | — | `--name`, `--description`, `--price-type`, `--price-value`, `--sla-minutes`, `--requirements`, `--deliverable`, `--required-funds`/`--no-required-funds`, `--hidden`/`--no-hidden` |
+| `offering update` | Update an existing offering | — | `--offering-id`, `--name`, `--description`, `--price-type`, `--price-value`, `--sla-minutes`, `--requirements`, `--deliverable`, `--required-funds`/`--no-required-funds`, `--hidden`/`--no-hidden` |
 | `offering delete` | Delete an offering | — | `--offering-id`, `--force` |
 
 ### Resource Management

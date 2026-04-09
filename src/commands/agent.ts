@@ -211,8 +211,7 @@ export function registerAgentCommands(program: Command): void {
       let description: string = opts.description?.trim() ?? "";
       let image: string | undefined = opts.image?.trim() || undefined;
 
-      const needsPrompt =
-        !name || !description || image === undefined;
+      const needsPrompt = !name || !description || image === undefined;
       let rl: readline.Interface | undefined;
 
       try {
@@ -545,7 +544,6 @@ export function registerAgentCommands(program: Command): void {
               ["Price", `${o.priceValue} (${o.priceType})`],
               ["SLA", `${o.slaMinutes} min`],
               ["Hidden", o.isHidden ? "Yes" : "No"],
-              ["Private", o.isPrivate ? "Yes" : "No"],
             ]);
           }
         } else {
