@@ -97,14 +97,14 @@ async function resolveToken(apiUrl: string): Promise<string> {
   return result.token;
 }
 
-export async function getClient(walletAddress?: string): Promise<{
+export async function getClient(walletAddress?: string, unauthenticated?: boolean): Promise<{
   agentApi: AgentApi;
   jobApi: JobApi;
   authApi: AuthApi;
 }> {
   const isTestnet = process.env.IS_TESTNET === "true";
   const apiUrl = isTestnet ? ACP_TESTNET_SERVER_URL : ACP_SERVER_URL;
-  const token = await resolveToken(apiUrl);
+  const token = unauthenticated ? undefined : await resolveToken(apiUrl);
   const httpClient = new ApiClient(apiUrl, token);
   return {
     agentApi: new AgentApi(httpClient),

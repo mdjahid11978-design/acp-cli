@@ -28,7 +28,7 @@ export function registerConfigureCommand(program: Command): void {
     .description("Authenticate the CLI with ACP")
     .action(async (_opts, cmd) => {
       const json = isJson(cmd);
-      const { authApi } = await getClient();
+      const { authApi } = await getClient(undefined, true);
 
       let url: string;
       let requestId: string;
