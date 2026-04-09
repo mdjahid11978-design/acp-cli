@@ -33,6 +33,7 @@ export function registerClientCommands(program: Command): void {
       "Evaluator wallet address (defaults to your own)"
     )
     .option("--legacy", "Target a legacy (openclaw-cli) provider")
+    .option("--hook <address>", "Hook address")
     .action(async (opts, cmd) => {
       const json = isJson(cmd);
       try {
@@ -136,7 +137,7 @@ export function registerClientCommands(program: Command): void {
           offering,
           opts.provider,
           requirements,
-          { evaluatorAddress: evaluator }
+          { evaluatorAddress: evaluator, hookAddress: opts.hook ?? undefined }
         );
 
         registerJob(jobId.toString(), false, chainId);
