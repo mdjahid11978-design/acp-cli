@@ -41,7 +41,15 @@ export async function getWalletIdByAddress(
     throw new Error(`Agent not found for wallet address: ${walletAddress}`);
   }
 
-  const walletId = agent.walletProviders[0].metadata.walletId;
+  const evmProvider = agent.walletProviders.find(
+    (wp) => (wp.chainType ?? "EVM") === "EVM"
+  );
+
+  if (!evmProvider) {
+    throw new Error(`EVM wallet provider not found for wallet address: ${walletAddress}`);
+  }
+
+  const walletId = evmProvider.metadata.walletId;
 
   if (!walletId) {
     throw new Error(`Wallet ID not found for wallet address: ${walletAddress}`);

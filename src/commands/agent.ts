@@ -178,9 +178,17 @@ async function runAddSignerFlow(
   }
 
   // 4. Persist public key reference to config (private key already stored by native binary)
-  const walletId = agent.walletProviders[0].metadata.walletId;
+  const evmProvider = agent.walletProviders.find(
+    (wp) => (wp.chainType ?? "EVM") === "EVM"
+  );
+
+  if (!evmProvider?.metadata.walletId) {
+    outputError(json, "EVM wallet provider not found for this agent.");
+    return false;
+  }
+
   setPublicKey(agent.walletAddress, publicKey);
-  setWalletId(agent.walletAddress, walletId);
+  setWalletId(agent.walletAddress, evmProvider.metadata.walletId);
 
   if (json) {
     outputResult(json, {

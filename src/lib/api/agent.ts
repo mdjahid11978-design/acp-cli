@@ -97,6 +97,7 @@ export interface Agent {
   isHidden: boolean;
   walletProviders: {
     provider: string;
+    chainType?: "EVM" | "SOLANA";
     metadata: {
       walletId: string;
     };
