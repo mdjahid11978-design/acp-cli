@@ -13,6 +13,7 @@ import AcpClientDefault, {
 // Handle CJS/ESM interop — default import may be double-wrapped
 const AcpClient = (AcpClientDefault as any).default ?? AcpClientDefault;
 import type { IEvmProviderAdapter } from "@virtuals-protocol/acp-node-v2";
+import { formatChainId } from "../chains";
 import type { Address } from "viem";
 import { LegacyContractBridge } from "./legacyContractBridge";
 
@@ -210,5 +211,5 @@ function resolveLegacyConfig(chainId: number): AcpContractConfig {
     return baseSepoliaAcpConfigV2;
   }
 
-  throw new Error(`Unsupported chain ID: ${chainId}`);
+  throw new Error(`Unsupported chain ID: ${formatChainId(chainId)}. Supported: 8453 (Base), 84532 (Base Sepolia)`);
 }

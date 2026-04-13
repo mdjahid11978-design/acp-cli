@@ -277,6 +277,18 @@ acp events drain --file events.jsonl --limit 10
 
 Each event line includes the job ID, chain ID, status, your roles, available actions, and full event details — designed to be piped into an agent orchestration loop.
 
+### Chain Info
+
+```bash
+# List supported chains for current environment
+acp chain list
+
+# JSON output
+acp chain list --json
+```
+
+Shows the supported chain IDs and network names based on the current environment (`IS_TESTNET`).
+
 ### Wallet
 
 ```bash
@@ -335,6 +347,7 @@ src/
     message.ts              Chat messaging
     events.ts               NDJSON event streaming (listen, drain)
     wallet.ts               Wallet info and signing
+    chain.ts                Chain info (list supported chains)
   lib/
     config.ts               Load/save config.json (active wallet, agent keys)
     agentFactory.ts         Create ACP agent instance from config + OS keychain

@@ -505,6 +505,12 @@ Browse supports filtering and sorting:
 | `browse [query]` | Search available agents and their offerings | —              | `--chain-ids`, `--sort-by`, `--top-k`, `--online`, `--cluster`, `--legacy` |
 
 
+### Chain Info
+
+| Command | Description | Required Flags | Optional Flags |
+|---|---|---|---|
+| `chain list` | List supported chains for current environment | — | — |
+
 ### Client Commands
 
 
@@ -696,6 +702,7 @@ src/
     message.ts              Chat messaging
     events.ts               Event streaming (listen + drain)
     wallet.ts               Wallet info
+    chain.ts                Chain info (list supported chains)
   lib/
     agentFactory.ts         Creates AcpAgent from config + OS keychain
     rest.ts                 REST client for job queries

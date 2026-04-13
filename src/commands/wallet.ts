@@ -7,6 +7,7 @@ import { getClient } from "../lib/api/client";
 import { getAgentId, getActiveWallet } from "../lib/config";
 import { CHAIN_NETWORK_MAP } from "../lib/api/agent";
 import { CliError } from "../lib/errors";
+import { formatChainId, formatChainIds } from "../lib/chains";
 import { c } from "../lib/color";
 import { openBrowser } from "../lib/browser";
 import { selectOption, prompt } from "../lib/prompt";
@@ -100,12 +101,23 @@ export function registerWalletCommands(program: Command): void {
       const json = isJson(cmd);
       try {
         const chainId = Number(opts.chainId);
+
+        const provider = await createProviderAdapter();
+        const supportedChainIds = await provider.getSupportedChainIds();
+        if (!supportedChainIds.includes(chainId)) {
+          throw new CliError(
+            `Unsupported chain ID: ${formatChainId(chainId)}`,
+            "VALIDATION_ERROR",
+            `Supported chains: ${formatChainIds(supportedChainIds)}`
+          );
+        }
+
         const network = CHAIN_NETWORK_MAP[chainId];
         if (!network) {
           throw new CliError(
-            `Unsupported chain ID: ${chainId}`,
+            `No network mapping for chain ID: ${chainId}`,
             "VALIDATION_ERROR",
-            `Supported chain IDs: ${Object.entries(CHAIN_NETWORK_MAP)
+            `Known networks: ${Object.entries(CHAIN_NETWORK_MAP)
               .map(([id, name]) => `${id} (${name})`)
               .join(", ")}`
           );
@@ -208,9 +220,9 @@ export function registerWalletCommands(program: Command): void {
         const supportedChainIds = await provider.getSupportedChainIds();
         if (!supportedChainIds.includes(chainId)) {
           throw new CliError(
-            `Unsupported chain ID: ${chainId}`,
+            `Unsupported chain ID: ${formatChainId(chainId)}`,
             "VALIDATION_ERROR",
-            `Supported chain IDs: ${supportedChainIds.join(", ")}`
+            `Supported chains: ${formatChainIds(supportedChainIds)}`
           );
         }
         const { agentApi } = await getClient();
