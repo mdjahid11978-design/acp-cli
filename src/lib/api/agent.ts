@@ -221,6 +221,33 @@ export interface TokenizeResponse {
   taxRecipient: string;
 }
 
+export interface TokenInfo {
+  address: string;
+  network: string;
+  tokenAddress: string | null;
+  tokenBalance: string;
+  tokenMetadata: {
+    decimals: number | null;
+    symbol: string | null;
+    name: string | null;
+    logo: string | null;
+  };
+  tokenPrices: { currency: string; value: string; lastUpdatedAt: string }[];
+  hasVirtualToken?: boolean;
+}
+
+export interface AgentAssetsResponse {
+  message: string;
+  data: { tokens: TokenInfo[]; pageKey: null };
+}
+
+export const CHAIN_NETWORK_MAP: Record<number, string> = {
+  8453: "base-mainnet",
+  84532: "base-sepolia",
+  56: "bnb-mainnet",
+  97: "bnb-testnet",
+};
+
 export interface UpdateAgentBody {
   name: string;
   description: string;
@@ -398,6 +425,16 @@ export class AgentApi {
       { acpAgentId }
     );
     return res.data;
+  }
+
+  async getAgentAssets(
+    agentId: string,
+    networks: string[]
+  ): Promise<AgentAssetsResponse> {
+    return this.client.post<AgentAssetsResponse>(
+      `/agents/${agentId}/assets`,
+      { networks }
+    );
   }
 
   async tokenize(
