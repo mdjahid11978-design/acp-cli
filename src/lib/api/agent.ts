@@ -107,6 +107,7 @@ export interface Agent {
     tokenAddress?: string;
     acpV2AgentId?: number;
   }[];
+  builderCode: string;
 }
 
 interface AgentListResponse {
@@ -431,10 +432,9 @@ export class AgentApi {
     agentId: string,
     networks: string[]
   ): Promise<AgentAssetsResponse> {
-    return this.client.post<AgentAssetsResponse>(
-      `/agents/${agentId}/assets`,
-      { networks }
-    );
+    return this.client.post<AgentAssetsResponse>(`/agents/${agentId}/assets`, {
+      networks,
+    });
   }
 
   async getCoinbaseUrl(

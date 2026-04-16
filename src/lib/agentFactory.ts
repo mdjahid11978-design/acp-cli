@@ -13,9 +13,12 @@ import {
 } from "@virtuals-protocol/acp-node-v2";
 import type { IEvmProviderAdapter } from "@virtuals-protocol/acp-node-v2";
 import {
+  getBuilderCode,
   getActiveWallet,
+  getAgentId,
   getPublicKey,
   getWalletId,
+  setBuilderCode,
   setWalletId,
 } from "./config";
 import { getClient } from "./api/client";
@@ -46,7 +49,9 @@ export async function getWalletIdByAddress(
   );
 
   if (!evmProvider) {
-    throw new Error(`EVM wallet provider not found for wallet address: ${walletAddress}`);
+    throw new Error(
+      `EVM wallet provider not found for wallet address: ${walletAddress}`
+    );
   }
 
   const walletId = evmProvider.metadata.walletId;
@@ -104,6 +109,17 @@ async function createProviderFromConfig(
 
   const signFn = createSignFn(publicKey);
 
+  let builderCode = getBuilderCode(walletAddress);
+  if (!builderCode) {
+    const agentId = getAgentId(walletAddress);
+    if (agentId) {
+      const { agentApi } = await getClient();
+      const agentData = await agentApi.getById(agentId);
+      setBuilderCode(agentData.walletAddress, agentData.builderCode);
+      builderCode = agentData.builderCode;
+    }
+  }
+
   return PrivyAlchemyEvmProviderAdapter.create({
     walletAddress: walletAddress as `0x${string}`,
     walletId,
@@ -111,6 +127,7 @@ async function createProviderFromConfig(
     chains,
     serverUrl,
     privyAppId,
+    builderCode,
   });
 }
 
