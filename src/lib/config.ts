@@ -10,6 +10,7 @@ interface AgentConfig {
   publicKey: string;
   walletId?: string;
   id?: string;
+  builderCode?: string;
 }
 
 interface JobRegistryEntry {
@@ -170,4 +171,19 @@ export function isTokenExpired(token: string): boolean {
   } catch {
     return true;
   }
+}
+
+export function setBuilderCode(
+  walletAddress: string,
+  builderCode: string
+): void {
+  const config = loadConfig();
+  config.agents ??= {};
+  config.agents[walletAddress] ??= { publicKey: "" };
+  config.agents[walletAddress].builderCode = builderCode;
+  saveConfig(config);
+}
+
+export function getBuilderCode(walletAddress: string): string | undefined {
+  return loadConfig().agents?.[walletAddress]?.builderCode;
 }
