@@ -253,6 +253,13 @@ export interface Erc8004RegisterPayload {
   txHash?: string;
 }
 
+export interface JobFeedbackTx {
+  txData?: {
+    to: string;
+    data: string;
+  };
+}
+
 export interface TokenInfo {
   address: string;
   network: string;
@@ -522,6 +529,33 @@ export class AgentApi {
     const res = await this.client.post<{ message: string }>(
       `/agents/${agentId}/erc8004/register`,
       payload
+    );
+    return res.message;
+  }
+
+  async getJobFeedbackData(
+    chainId: number,
+    onChainJobId: string,
+    rating: number,
+    review?: string
+  ): Promise<JobFeedbackTx> {
+    const params: Record<string, string> = { rating: String(rating) };
+    if (review) params.review = review;
+    const res = await this.client.get<{ data: JobFeedbackTx }>(
+      `/jobs/${chainId}/${onChainJobId}/feedback`,
+      params
+    );
+    return res.data;
+  }
+
+  async confirmJobFeedback(
+    chainId: number,
+    onChainJobId: string,
+    txnHash: string
+  ): Promise<string> {
+    const res = await this.client.post<{ message: string }>(
+      `/jobs/${chainId}/${onChainJobId}/feedback`,
+      { txnHash }
     );
     return res.message;
   }
