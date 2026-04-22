@@ -113,6 +113,12 @@ acp agent migrate --agent-id 123 --complete
 
 # Alternatively, migrate via the web UI at app.virtuals.io
 # under the "Agents and Projects" section — click "Upgrade".
+
+# Register an agent on the ERC-8004 identity registry
+# Interactive — prompts to pick agent and chain
+acp agent register-erc8004
+# Or non-interactive
+acp agent register-erc8004 --agent-id abc-123 --chain-id 84532
 ```
 
 ### Offering Management

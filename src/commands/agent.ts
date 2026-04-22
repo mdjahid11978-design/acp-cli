@@ -16,6 +16,8 @@ import {
   TokenizeStatusResponse,
   type Agent,
   LegacyAgent,
+  Erc8004RegisterTx,
+  Erc8004RegisterPayload,
 } from "../lib/api/agent";
 import { getClient } from "../lib/api/client";
 import {
@@ -34,8 +36,12 @@ import {
 } from "../lib/config";
 import { generateKeyPair as generateNativeKeyPair } from "../lib/acpCliSigner";
 import { openBrowser } from "../lib/browser";
-import { createAgentFromConfig } from "../lib/agentFactory";
+import {
+  createAgentFromConfig,
+  createProviderAdapter,
+} from "../lib/agentFactory";
 import { EvmAcpClient, SUPPORTED_CHAINS } from "@virtuals-protocol/acp-node-v2";
+import * as viemChains from "viem/chains";
 
 function parseLegacyId(raw: string, json: boolean): number | null {
   const id = parseInt(raw, 10);
@@ -525,9 +531,31 @@ export function registerAgentCommands(program: Command): void {
       }
 
       if (isTTY()) {
-        const chainRows: [string, string][] = (agentData.chains ?? []).map(
-          (c) => [`Chain ${c.chainId}`, `${c.tokenAddress ?? "Not tokenized"}`]
-        );
+        const acpAgent = await createAgentFromConfig();
+        const client = acpAgent.getClient();
+
+        let chains = agentData.chains;
+
+        if (client instanceof EvmAcpClient) {
+          const supportedChainIds = await client
+            .getProvider()
+            .getSupportedChainIds();
+
+          const existingChainIds = new Set(chains.map((c) => c.chainId));
+          const missingChains = supportedChainIds
+            .filter((id) => !existingChainIds.has(id))
+            .map((id) => ({ chainId: id }));
+
+          chains = [...chains, ...missingChains];
+        }
+
+        const chainRows: [string, string][] = chains.flatMap((c) => [
+          [`Chain ${c.chainId} Token`, c.tokenAddress ?? "Not tokenized"],
+          [
+            `Chain ${c.chainId} ERC-8004`,
+            c.erc8004AgentId ? String(c.erc8004AgentId) : "Not registered",
+          ],
+        ]);
 
         console.log(`\n${c.bold("Agent Details:")}`);
         printTable([
@@ -536,6 +564,7 @@ export function registerAgentCommands(program: Command): void {
           ["Description", agentData.description],
           ["Role", agentData.role],
           ["Wallet Address", agentData.walletAddress ?? "N/A"],
+          ["Sol Wallet Address", agentData.solWalletAddress ?? "N/A"],
           ["Hidden", agentData.isHidden ? "Yes" : "No"],
           ["Image", agentData.imageUrl ?? "N/A"],
           ["Created", agentData.createdAt],
@@ -863,6 +892,212 @@ export function registerAgentCommands(program: Command): void {
           agentId: selected.id,
           agentName: selected.name,
           tokenizeResponse,
+        });
+      }
+    });
+
+  agent
+    .command("register-erc8004")
+    .description("Register an agent on the ERC-8004 identity registry")
+    .option("--agent-id <id>", "Agent ID")
+    .option("--chain-id <id>", "Chain ID to register on")
+    .action(async (opts, cmd) => {
+      const { agentApi } = await getClient();
+      const json = isJson(cmd);
+
+      const acpAgent = await createAgentFromConfig();
+      const client = acpAgent.getClient();
+
+      if (!(client instanceof EvmAcpClient)) {
+        outputError(
+          json,
+          "Only EVM chains are supported for ERC-8004 registration."
+        );
+        return;
+      }
+
+      const provider = client.getProvider();
+
+      const providerChains = await provider.getSupportedChainIds();
+      const chainNames = new Map<number, string>(
+        Object.values(viemChains).map((c) => [c.id, c.name])
+      );
+      const erc8004Chains = providerChains.map((id) => ({
+        id,
+        name: chainNames.get(id) ?? `Chain ${id}`,
+      }));
+
+      // Step 1: Select agent
+      let selected = await resolveAgent(agentApi, opts, json);
+
+      if (!selected) {
+        let agents: Agent[];
+        try {
+          const result = await agentApi.list();
+          agents = result.data;
+        } catch (err) {
+          outputError(
+            json,
+            `Failed to fetch agents: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+          return;
+        }
+
+        if (agents.length === 0) {
+          outputError(json, "No agents found. Run `acp agent create` first.");
+          return;
+        }
+
+        selected = await selectFromList(
+          "Choose the agent to register on ERC-8004:",
+          agents
+        );
+      }
+
+      // Step 2: Select chain
+      let selectedChain: { id: number; name: string };
+      if (opts.chainId) {
+        const match = erc8004Chains.find(
+          (c) => c.id.toString() === opts.chainId
+        );
+        if (!match) {
+          outputError(
+            json,
+            `Unsupported chain ID: ${opts.chainId}. Supported: ${erc8004Chains
+              .map((c) => `${c.name} (${c.id})`)
+              .join(", ")}`
+          );
+          return;
+        }
+        selectedChain = match;
+      } else {
+        selectedChain = await selectOption(
+          "\nChoose a chain to register on:",
+          erc8004Chains,
+          (chain) => chain.name
+        );
+      }
+
+      // Step 3: Fetch registration calldata from backend
+      let registerData: Erc8004RegisterTx;
+      try {
+        registerData = await agentApi.getErc8004RegisterData(
+          selected.id,
+          selectedChain.id
+        );
+      } catch (err) {
+        outputError(
+          json,
+          `Failed to prepare ERC-8004 registration: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      }
+
+      // Step 4: Send transaction using the agent's wallet
+      const previousWallet = getActiveWallet();
+      setActiveWallet(selected.walletAddress);
+      const newWalletProvider = await createProviderAdapter();
+
+      let payload: Erc8004RegisterPayload = {
+        type: registerData.type,
+        chainId: selectedChain.id,
+      };
+
+      try {
+        if (!json) {
+          console.log(
+            `\nRegistering ${selected.name} on ${selectedChain.name}...`
+          );
+        }
+
+        if (registerData.type === "register") {
+          const result = await newWalletProvider.sendCalls(selectedChain.id, [
+            {
+              to: registerData.data.to as `0x${string}`,
+              data: registerData.data.data as `0x${string}`,
+            },
+          ]);
+          payload.txHash = Array.isArray(result) ? result[0] : result;
+        } else if (registerData.type === "set-agent-wallet") {
+          const signingData = registerData.data.typedData;
+
+          if (!signingData) {
+            outputError(json, "No signing data found.");
+            return;
+          }
+
+          const typedDataArgs = {
+            domain: {
+              name: signingData.domain.name,
+              version: signingData.domain.version,
+              chainId: signingData.domain.chainId,
+              verifyingContract: signingData.domain
+                .verifyingContract as `0x${string}`,
+            },
+            types: {
+              AgentWalletSet: signingData.types.AgentWalletSet,
+            } as Record<string, { name: string; type: string }[]>,
+            primaryType: "AgentWalletSet" as const,
+            message: {
+              agentId: BigInt(signingData.agentId),
+              newWallet: signingData.newWallet as `0x${string}`,
+              owner: signingData.owner as `0x${string}`,
+              deadline: BigInt(signingData.deadline),
+            },
+          };
+
+          const signature = await newWalletProvider.signTypedData(
+            selectedChain.id,
+            typedDataArgs
+          );
+
+          payload.signature = signature;
+          payload.ownerAddress = signingData.owner as `0x${string}`;
+          payload.deadline = signingData.deadline.toString();
+        } else {
+          outputError(json, "Unsupported registration type.");
+          return;
+        }
+      } catch (err) {
+        outputError(
+          json,
+          `Failed to register on ERC-8004: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      } finally {
+        if (previousWallet) setActiveWallet(previousWallet);
+      }
+
+      // Step 5: Finalize registration
+      try {
+        if (!json) console.log("Finalizing registration...");
+        const message = await agentApi.confirmErc8004Register(
+          selected.id,
+          payload
+        );
+        if (!json) console.log(message);
+      } catch (err) {
+        outputError(
+          json,
+          `Registration finalization failed: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        return;
+      }
+
+      if (json) {
+        outputResult(json, {
+          success: true,
+          agentId: selected.id,
+          agentName: selected.name,
+          chainId: selectedChain.id,
         });
       }
     });

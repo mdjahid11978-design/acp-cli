@@ -595,6 +595,7 @@ Browse supports filtering and sorting:
 | `agent whoami`     | Show details of the currently active agent | --           | --                                      |
 | `agent tokenize`   | Tokenize an agent on a blockchain        | --             | `--wallet-address`, `--agent-id`, `--chain-id`, `--symbol` |
 | `agent migrate`    | Migrate a legacy agent to ACP SDK 2.0    | --             | `--agent-id`, `--complete` |
+| `agent register-erc8004` | Register an agent on the ERC-8004 identity registry | -- | `--agent-id`, `--chain-id` |
 
 All agent commands support non-interactive use via flags. When flags are omitted, interactive prompts are used.
 
