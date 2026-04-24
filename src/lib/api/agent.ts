@@ -283,6 +283,16 @@ export interface SearchEmailsResponse {
   messages: EmailMessage[];
 }
 
+// Metadata-only. Bytes come from the separate `/download` endpoint so we
+// don't bloat JSON payloads with base64-encoded blobs.
+export interface EmailAttachmentMetadata {
+  id: string;
+  messageId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: string;
+}
+
 // ── Agent Card types ────────────────────────────────────────────────
 //
 // The card API uses a spend-request model: the agent sets up a profile,
@@ -748,6 +758,27 @@ export class AgentApi {
       {}
     );
     return res.data;
+  }
+
+  async getEmailAttachment(
+    agentId: string,
+    attachmentId: string
+  ): Promise<EmailAttachmentMetadata> {
+    const res = await this.client.get<{ data: EmailAttachmentMetadata }>(
+      `/agents/${agentId}/email/attachments/${attachmentId}`
+    );
+    return res.data;
+  }
+
+  // Returns the raw fetch Response so the caller can stream the body to
+  // disk (or stdout) without buffering, and read filename/MIME from headers.
+  async downloadEmailAttachment(
+    agentId: string,
+    attachmentId: string
+  ): Promise<Response> {
+    return this.client.getRaw(
+      `/agents/${agentId}/email/attachments/${attachmentId}/download`
+    );
   }
 
   // ── Agent Card methods ──────────────────────────────────────────

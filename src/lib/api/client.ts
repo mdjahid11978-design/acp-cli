@@ -72,6 +72,22 @@ export class ApiClient {
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return res.json() as Promise<T>;
   }
+
+  // Raw GET for endpoints that return binary (e.g. attachment download).
+  // Returns the Response so the caller can stream the body and read
+  // `content-type` / `content-disposition` headers from upstream.
+  async getRaw(
+    path: string,
+    params?: Record<string, string>,
+  ): Promise<Response> {
+    const url = new URL(path, this.baseUrl);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    }
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return res;
+  }
 }
 
 async function resolveToken(apiUrl: string): Promise<string> {

@@ -360,6 +360,9 @@ acp email extract-otp --message-id <id>
 
 # Extract links from an email message
 acp email extract-links --message-id <id>
+
+# Download an attachment (streams to <output>/<filename>)
+acp email attachment --attachment-id <id> --output ./downloads
 ```
 
 ### Agent Card

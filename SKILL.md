@@ -612,6 +612,7 @@ for architecture, anti-spam policy, and rate limits.
 | `email reply` | Reply to an email thread | `--thread-id` | `--body`, `--html-body` |
 | `email extract-otp` | Extract OTP code from an email message | `--message-id` | — |
 | `email extract-links` | Extract links from an email message | `--message-id` | — |
+| `email attachment` | Download an attachment (streams to disk) | `--attachment-id` | `--output <dir>` |
 
 ### Agent Card
 

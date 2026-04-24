@@ -1,4 +1,8 @@
+import * as fs from "fs";
+import * as path from "path";
 import * as readline from "readline";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import type { Command } from "commander";
 import { isJson, outputResult, outputError, isTTY } from "../lib/output";
 import { c } from "../lib/color";
@@ -6,6 +10,34 @@ import { getClient } from "../lib/api/client";
 import { prompt, printTable } from "../lib/prompt";
 import { getActiveAgentId } from "../lib/activeAgent";
 import type { EmailMessage } from "../lib/api/agent";
+
+// Pull a filename out of an RFC 6266 Content-Disposition header. Falls
+// back to the BE-supplied metadata filename if the header is missing or
+// malformed. We strip path separators defensively — we never want an
+// upstream-controlled filename to traverse directories on the caller's
+// disk.
+function filenameFromDisposition(
+  disposition: string | null,
+  fallback: string,
+): string {
+  let name = fallback;
+  if (disposition) {
+    // RFC 5987 extended form first: filename*=UTF-8''my%20file.pdf
+    const ext = /filename\*=(?:[^']*'[^']*')?([^;]+)/i.exec(disposition);
+    if (ext?.[1]) {
+      try {
+        name = decodeURIComponent(ext[1].trim().replace(/^"|"$/g, ""));
+      } catch {
+        /* fall through to `filename=` form */
+      }
+    }
+    if (name === fallback) {
+      const plain = /filename=\s*"?([^";]+)"?/i.exec(disposition);
+      if (plain?.[1]) name = plain[1].trim();
+    }
+  }
+  return path.basename(name);
+}
 
 function formatDate(iso: string): string {
   try {
@@ -438,6 +470,88 @@ export function registerEmailCommands(program: Command): void {
             ["Category", link.category],
           ]);
           console.log();
+        }
+      } catch (err) {
+        outputError(json, err instanceof Error ? err : String(err));
+      }
+    });
+
+  // ATTACHMENT
+  // Two-step: fetch metadata for filename/MIME, then stream bytes to
+  // disk. We stream (don't buffer) so large files don't sit in memory.
+  email
+    .command("attachment")
+    .description(
+      "Download an email attachment. Bytes stream to <output>/<filename>."
+    )
+    .requiredOption("--attachment-id <id>", "Attachment ID (from a thread response)")
+    .option(
+      "--output <dir>",
+      "Output directory (default: current directory)",
+      "."
+    )
+    .action(async (opts, cmd) => {
+      const { agentApi } = await getClient();
+      const json = isJson(cmd);
+      const agentId = getActiveAgentId(json);
+      if (!agentId) return;
+
+      const attachmentId: string = opts.attachmentId;
+      const outputDir: string = path.resolve(opts.output ?? ".");
+
+      try {
+        // Pre-fetch metadata so we know what we're saving even before the
+        // stream resolves, and so `--json` can include size/MIME/etc.
+        const meta = await agentApi.getEmailAttachment(agentId, attachmentId);
+
+        await fs.promises.mkdir(outputDir, { recursive: true });
+
+        const res = await agentApi.downloadEmailAttachment(
+          agentId,
+          attachmentId
+        );
+        if (!res.body) {
+          outputError(json, "Attachment download returned no body.");
+          return;
+        }
+
+        // Prefer upstream Content-Disposition for the filename (handles
+        // RFC 5987 escapes cleanly); fall back to metadata.filename. We
+        // basename() the result so a malicious header can't escape into
+        // the parent directory.
+        const filename = filenameFromDisposition(
+          res.headers.get("content-disposition"),
+          meta.filename
+        );
+        const destination = path.join(outputDir, filename);
+
+        // Node's undici body is a WHATWG ReadableStream; convert it so
+        // stream.pipeline can sink it into a write stream with proper
+        // back-pressure handling.
+        const nodeStream = Readable.fromWeb(
+          res.body as unknown as import("stream/web").ReadableStream
+        );
+        const writer = fs.createWriteStream(destination);
+        await pipeline(nodeStream, writer);
+
+        const stat = await fs.promises.stat(destination);
+
+        if (json) {
+          outputResult(json, {
+            id: meta.id,
+            messageId: meta.messageId,
+            filename,
+            mimeType: meta.mimeType,
+            sizeBytes: String(stat.size),
+            path: destination,
+          });
+        } else {
+          console.log(`${c.green("Saved")} ${c.cyan(destination)}`);
+          printTable([
+            ["Filename", filename],
+            ["MIME", meta.mimeType],
+            ["Size", `${stat.size} bytes`],
+          ]);
         }
       } catch (err) {
         outputError(json, err instanceof Error ? err : String(err));
