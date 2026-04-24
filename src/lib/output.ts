@@ -65,13 +65,13 @@ export function isTTY(): boolean {
   return process.stdout.isTTY === true;
 }
 
-// Format an ISO timestamp for human-readable output. Falls back to the
-// raw string if parsing throws, so malformed server timestamps never
-// crash a table render.
+// Format an ISO timestamp for human-readable output. `new Date(bad)`
+// doesn't throw — it yields an Invalid Date object whose toLocaleString
+// returns the literal string "Invalid Date". Check with isNaN on the
+// epoch so malformed server timestamps fall back to the raw string
+// instead of rendering as "Invalid Date" in tables.
 export function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
 }
