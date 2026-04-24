@@ -52,6 +52,17 @@ export class ApiClient {
     return res.json() as Promise<T>;
   }
 
+  async patch<T>(path: string, body: unknown): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+    const res = await fetch(url.toString(), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return res.json() as Promise<T>;
+  }
+
   async delete<T>(path: string): Promise<T> {
     const url = new URL(path, this.baseUrl);
     const res = await fetch(url.toString(), {
@@ -60,6 +71,22 @@ export class ApiClient {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return res.json() as Promise<T>;
+  }
+
+  // Raw GET for endpoints that return binary (e.g. attachment download).
+  // Returns the Response so the caller can stream the body and read
+  // `content-type` / `content-disposition` headers from upstream.
+  async getRaw(
+    path: string,
+    params?: Record<string, string>,
+  ): Promise<Response> {
+    const url = new URL(path, this.baseUrl);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    }
+    const res = await fetch(url.toString(), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return res;
   }
 }
 
