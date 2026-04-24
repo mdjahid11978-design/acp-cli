@@ -4,7 +4,13 @@ import * as readline from "readline";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import type { Command } from "commander";
-import { isJson, outputResult, outputError, isTTY } from "../lib/output";
+import {
+  isJson,
+  outputResult,
+  outputError,
+  isTTY,
+  formatDate,
+} from "../lib/output";
 import { c } from "../lib/color";
 import { getClient } from "../lib/api/client";
 import { prompt, printTable } from "../lib/prompt";
@@ -37,14 +43,6 @@ function filenameFromDisposition(
     }
   }
   return path.basename(name);
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
 }
 
 function printMessage(msg: EmailMessage): void {

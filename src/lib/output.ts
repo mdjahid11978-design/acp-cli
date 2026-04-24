@@ -64,3 +64,14 @@ export function isTTY(): boolean {
   if (process.env.TERM === "dumb") return false;
   return process.stdout.isTTY === true;
 }
+
+// Format an ISO timestamp for human-readable output. Falls back to the
+// raw string if parsing throws, so malformed server timestamps never
+// crash a table render.
+export function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}

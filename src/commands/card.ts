@@ -1,6 +1,6 @@
 import * as readline from "readline";
 import type { Command } from "commander";
-import { isJson, outputResult, outputError } from "../lib/output";
+import { isJson, outputResult, outputError, formatDate } from "../lib/output";
 import { c } from "../lib/color";
 import { getClient } from "../lib/api/client";
 import { prompt, printTable } from "../lib/prompt";
@@ -15,14 +15,6 @@ import type {
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
 }
 
 // nextStep is the server's authoritative hint for what to do next. Always
