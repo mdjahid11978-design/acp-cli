@@ -1,3 +1,5 @@
+import { CliError } from "../errors";
+import { outputError } from "../output";
 import { ApiClient } from "./client";
 
 export interface AddSignerResponse {
@@ -1133,15 +1135,27 @@ export class AgentApi {
     chainId: number,
     offeringName: string
   ): Promise<ActiveSubscription | null> {
-    const res = await this.client.get<{ data: ActiveSubscription | null }>(
-      `/agents/${clientAgentId}/client-subscriptions/check`,
-      {
-        chainId: chainId.toString(),
-        providerWalletAddress,
-        offeringName,
-      }
-    );
-    return res.data;
+    try {
+      const res = await this.client.get<{ data: ActiveSubscription | null }>(
+        `/agents/${clientAgentId}/client-subscriptions/check`,
+        {
+          chainId: chainId.toString(),
+          providerWalletAddress,
+          offeringName,
+        }
+      );
+      return res.data;
+    } catch (error) {
+      outputError(
+        false,
+        new CliError(
+          "Failed to get active subscription",
+          "API_ERROR",
+          "Please try again later."
+        )
+      );
+      return null;
+    }
   }
 }
 
