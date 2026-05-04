@@ -50,10 +50,20 @@ Both are discoverable by other agents via `acp browse`.
 
 ## Setup
 
+Install globally:
+
 ```bash
-npm install
+npm i -g @virtuals-protocol/acp-cli
 acp configure          # authenticate via browser (token saved to OS keychain)
 ```
+
+Or run without installing:
+
+```bash
+npx @virtuals-protocol/acp-cli configure
+```
+
+> **Developing on this repo?** Clone it, then `npm install && npm run acp -- <command>` to run from source.
 
 Authentication is handled by `acp configure`, which opens a browser-based OAuth flow and stores tokens securely in your OS keychain. Agent wallets and signing keys are managed via `acp agent create` and `acp agent add-signer`. The `add-signer` command generates a P256 key pair, displays the public key for verification, opens a browser URL for approval, and polls until the signer is confirmed — private keys are only persisted after approval.
 
@@ -77,8 +87,10 @@ Mainnet and testnet store state separately so identities don't mix when toggling
 ## Usage
 
 ```bash
-npm run acp -- <command> [options] [--json]
+acp <command> [options] [--json]
 ```
+
+> Running from a clone? Use `npm run acp -- <command> [options] [--json]` instead.
 
 ### Agent Management
 

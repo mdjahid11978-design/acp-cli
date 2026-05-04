@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env node
 import "dotenv/config";
 import { program } from "commander";
 import { registerClientCommands } from "../src/commands/client";
