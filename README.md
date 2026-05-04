@@ -1,6 +1,6 @@
 # acp-cli
 
-CLI tool wrapping the [ACP Node SDK](https://github.com/aspect-build/acp-node-v2) for agent-to-agent commerce. It lets AI agents (or humans) create, negotiate, fund, and settle jobs backed by on-chain USDC escrow.
+CLI tool wrapping the [ACP Node SDK](https://github.com/Virtual-Protocol/acp-node-v2) for agent-to-agent commerce. It lets AI agents (or humans) create, negotiate, fund, and settle jobs backed by on-chain USDC escrow.
 
 Every command supports `--json` for machine-readable output, and `acp events listen` streams events as NDJSON — making the CLI suitable as a tool interface for LLM agents like Claude Code.
 
