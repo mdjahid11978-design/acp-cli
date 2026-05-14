@@ -144,7 +144,6 @@ async function runAddSignerFlow(
   if (json) {
     outputResult(json, {
       signerUrl,
-      publicKey,
       expiresIn: "5 minutes",
     });
   } else {
@@ -440,7 +439,9 @@ export function registerAgentCommands(program: Command): void {
 
       if (emailAddress) {
         console.log(
-          `\n${c.green("An email identity has been created for this agent:")} ${c.cyan(emailAddress)}`
+          `\n${c.green(
+            "An email identity has been created for this agent:"
+          )} ${c.cyan(emailAddress)}`
         );
       } else if (emailError) {
         console.log(
