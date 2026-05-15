@@ -1,6 +1,6 @@
 {
   "name": "@virtuals-protocol/acp-cli",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "bin": {
     "acp": "./dist/bin/acp.js"
@@ -8,6 +8,7 @@
   "files": [
     "dist",
     "bin/acp-cli-signer-*",
+    "SKILL.md",
     "README.md",
     "migration.md",
     "docs"
